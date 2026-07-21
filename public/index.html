@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="th">
 <head>
 <meta charset="UTF-8">
@@ -317,6 +317,18 @@ async function apiJSON(method, path, body){
     return { error: String(e) };
   }
 }
+
+// ---- show/hide the app shell depending on login state ----
+function showApp(){
+  const sb = document.querySelector('.sidebar'); if(sb) sb.style.display='flex';
+  const mn = document.querySelector('.main'); if(mn) mn.style.display='flex';
+}
+function hideApp(){
+  const sb = document.querySelector('.sidebar'); if(sb) sb.style.display='none';
+  const mn = document.querySelector('.main'); if(mn) mn.style.display='none';
+}
+
+// ---- load current logged-in user from server, update header/avatar/login state ----
 async function loadMe(){
   try{
     const r = await fetch('/api/me', { credentials: 'same-origin' });
@@ -325,19 +337,17 @@ async function loadMe(){
     if(loggedUser){
       document.getElementById('loginBtn').style.display='none';
       document.getElementById('logoutBtn').style.display='inline-block';
-      const initials = (loggedUser.name||'').split(' ').map(s=>s[0]).slice(0,2).join('');
+      const nm = loggedUser.name || loggedUser.fullName || loggedUser.username || '';
+      const initials = nm.split(' ').map(s=>s[0]).slice(0,2).join('');
       document.getElementById('avatarMini').textContent = initials || 'ผก';
       currentRole = (typeof loggedUser.roleIndex==='number' && loggedUser.roleIndex>=0) ? loggedUser.roleIndex : -1;
-      // hide landing
       const land = document.getElementById('landing'); if(land) land.style.display='none';
       showApp();
-      await loadDocsFromServer();
     } else {
       document.getElementById('loginBtn').style.display='inline-block';
       document.getElementById('logoutBtn').style.display='none';
       document.getElementById('avatarMini').textContent = 'ธก';
       currentRole = -1;
-      // show landing
       const land = document.getElementById('landing'); if(land) land.style.display='flex';
       hideApp();
     }
@@ -345,23 +355,18 @@ async function loadMe(){
   }catch(e){ console.error(e); }
 }
 
-function showApp(){ document.querySelector('.sidebar').style.display='flex'; document.querySelector('.main').style.display='flex'; }
-function hideApp(){ document.querySelector('.sidebar').style.display='none'; document.querySelector('.main').style.display='none'; }
-
+// ---- fetch all documents from the server ----
 async function loadDocsFromServer(){
-  try{
-    const r = await fetch('/api/docs', { credentials: 'same-origin' });
-    const j = await r.json();
-    docs = Array.isArray(j) ? j : [];
-    docSeq = docs.reduce((m,d)=>Math.max(m,d.seq||0),0);
-    if(docs.length>0 && selectedIdx===null) selectedIdx = 0;
-    renderList(); renderDetail();
-  }catch(e){ console.error('load docs', e); }
+  const res = await apiJSON('GET','/api/docs');
+  if(Array.isArray(res)) docs = res;
+  else if(res && Array.isArray(res.docs)) docs = res.docs;
+  else docs = [];
+  if(selectedIdx===null || !docs[selectedIdx]) selectedIdx = docs.length ? 0 : null;
+  renderList(); renderDetail();
 }
 
-
 let docSeq = 0;
-let docs = [];          // starts empty — real use, no sample data
+let docs = [];          // populated from server via loadDocsFromServer()
 let selectedIdx = null;
 let currentRole = -1;
 let activeFilter = 'all';
@@ -438,6 +443,8 @@ function visibleDocs(){
   });
 }
 
+// NOTE: this is the ONLY definition of renderList in the file now (the duplicate
+// that had no delete button, which was silently overriding this one, has been removed).
 function renderList(){
   const wrap = document.getElementById('docCards');
   const list = visibleDocs();
@@ -449,18 +456,38 @@ function renderList(){
     wrap.innerHTML = `<div class="empty-list">ไม่มีหนังสือในหมวดนี้</div>`;
     return;
   }
+  const isAdmin = loggedUser && loggedUser.isSuperAdmin;
   wrap.innerHTML = list.map((d)=>{
     const i = docs.indexOf(d);
     const s = statusOf(d);
     const [cls,label] = statusLabel(s);
+    const delBtn = isAdmin ? `<span class="del-doc-btn" data-delid="${d.id}" title="ลบหนังสือนี้">🗑️</span>` : '';
     return `<div class="doc-card ${i===selectedIdx?'sel':''}" data-i="${i}">
-      <div class="doc-top"><span class="doc-no">${d.no}</span><span class="status-badge ${cls}">${label}</span></div>
+      <div class="doc-top"><span class="doc-no">${d.no}</span><span class="status-badge ${cls}">${label}</span>${delBtn}</div>
       <div class="doc-title">${d.title}</div>
       <div class="doc-where">${whereText(d)}</div>
     </div>`;
   }).join('');
   wrap.querySelectorAll('.doc-card').forEach(card=>{
-    card.onclick = ()=>{ selectedIdx = parseInt(card.dataset.i); renderList(); renderDetail(); };
+    card.onclick = (e)=>{ if(e.target.classList.contains('del-doc-btn')) return; selectedIdx = parseInt(card.dataset.i); renderList(); renderDetail(); };
+  });
+  wrap.querySelectorAll('.del-doc-btn').forEach(btn=>{
+    btn.onclick = async (e)=>{
+      e.stopPropagation();
+      const id = btn.dataset.delid;
+      if(!confirm('ยืนยันลบหนังสือฉบับนี้ถาวร? การลบนี้กู้คืนไม่ได้')) return;
+      try{
+        const r = await fetch('/api/docs/'+id, { method:'DELETE', credentials:'same-origin' });
+        const j = await r.json();
+        if(r.ok){
+          showToast('🗑️ ลบหนังสือเรียบร้อยแล้ว');
+          selectedIdx = null;
+          await loadDocsFromServer();
+        } else {
+          showToast('❌ ลบไม่สำเร็จ: '+(j.error||'ไม่ทราบสาเหตุ'));
+        }
+      }catch(err){ showToast('❌ เกิดข้อผิดพลาดในการลบ'); }
+    };
   });
 }
 
@@ -602,7 +629,6 @@ function renderDetail(){
 }
 
 function forward(d, idx, text, sigData){
-  // call server to forward
   (async ()=>{
     const res = await apiJSON('POST', `/api/docs/${d.id}/forward`, { idx, text, signature: sigData, files: d.chain[idx].files });
     if(res && res.id){
@@ -667,7 +693,7 @@ document.getElementById('submitLogin').onclick = async (e)=>{
   const p = document.getElementById('loginPass').value.trim();
   if(!u||!p){ showToast('กรุณากรอกชื่อผู้ใช้งานและรหัสผ่าน','error'); return; }
   const res = await apiJSON('POST','/api/login',{ username:u, password:p });
-  if(res && res.user){ document.getElementById('loginBack').classList.remove('open'); showToast('ยินดีต้อนรับ ' + (res.user.name||res.user.username),'success'); await loadMe(); }
+  if(res && res.user){ document.getElementById('loginBack').classList.remove('open'); showToast('ยินดีต้อนรับ ' + (res.user.name||res.user.username),'success'); await loadMe(); await loadDocsFromServer(); }
   else showToast(res && res.error ? res.error : 'รหัสผ่านไม่ถูกต้อง หรือไม่มีบัญชีนี้', 'error');
 };
 
@@ -692,7 +718,7 @@ function landingShowLogin(){
     const p = document.getElementById('landingPass').value.trim();
     if(!u||!p){ showToast('กรุณากรอกชื่อผู้ใช้งานและรหัสผ่าน','error'); return; }
     const res = await apiJSON('POST','/api/login',{ username:u, password:p });
-    if(res && res.user){ showToast('ยินดีต้อนรับ ' + (res.user.name||res.user.username),'success'); await loadMe(); }
+    if(res && res.user){ showToast('ยินดีต้อนรับ ' + (res.user.name||res.user.username),'success'); await loadMe(); await loadDocsFromServer(); }
     else showToast(res && res.error ? res.error : 'รหัสผ่านไม่ถูกต้อง หรือไม่มีบัญชีนี้','error');
   };
 }
@@ -788,7 +814,6 @@ document.getElementById('submitNew').onclick = async ()=>{
   const files = [];
   for(const f of rawFiles){ files.push(await fileToDataURL(f)); }
 
-  // send to server (requires login)
   const payload = { title, author, urgent, files };
   const resp = await apiJSON('POST','/api/docs', payload);
   if(resp && resp.id){ docs.unshift(resp); selectedIdx = 0; showToast('📄 สร้างหนังสือใหม่เรียบร้อย', 'success'); closeModal(); renderList(); renderDetail(); }

