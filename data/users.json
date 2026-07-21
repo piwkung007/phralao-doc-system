@@ -81,5 +81,15 @@
     "password": "0821289643za",
     "role": 2,
     "roleIndex": 2
+  },
+  {
+    "id": "u-1784623815565",
+    "fullName": "ชัยศรี พลเทพ",
+    "position": "นายก",
+    "username": "piwkung009",
+    "password": "0821289643za",
+    "role": 6,
+    "roleIndex": 6,
+    "isSuperAdmin": false
   }
 ]

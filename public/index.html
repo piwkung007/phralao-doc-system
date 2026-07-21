@@ -162,7 +162,7 @@
     <div style="flex:1;background:linear-gradient(180deg,var(--navy),var(--navy-deep));color:#fff;border-radius:14px;padding:28px;box-shadow:0 6px 30px rgba(11,42,74,0.12);">
       <div style="font-size:20px;font-weight:800;margin-bottom:6px">ระบบสารบรรณอิเล็กทรอนิกส์</div>
       <div style="font-size:14px;opacity:0.9;margin-bottom:18px">เทศบาลตำบลพระเหลา — ระบบจัดการสายการเกษียนหนังสือราชการ</div>
-      <p style="opacity:0.9;line-height:1.6">ระบบนี้สงวนสิทธิ์ให้เฉพาะเจ้าหน้าที่ของเทศบาลตำบลพระเหลา กรุณาเข้าสู่ระบบหรือสมัครสมาชิกสำหรับเจ้าหน้าที่เพื่อใช้งาน</p>
+      <p style="opacity:0.9;line-height:1.6">ระบบนี้สงวนสิทธิ์ให้เฉพาะเจ้าหน้าที่ของเทศบาลตำบลพระเหลา กรุณาเข้าสู่ระบบหรือสมัครสมาชิกสำหรับเจ้าหน้าที่เพื่อใช้งาน สร้างเเละพัฒนาโดย พิวพนา โทบุตร</p>
       <div style="margin-top:18px;display:flex;gap:10px;"><button class="btn-primary" id="landingLogin">เข้าสู่ระบบ</button><button class="btn-sm" id="landingRegister">สมัครสมาชิก</button></div>
     </div>
     <div id="landingPane" style="width:420px;background:#fff;border-radius:14px;padding:20px;box-shadow:0 6px 30px rgba(11,42,74,0.06)">
@@ -310,8 +310,13 @@ let loggedUser = null;
 async function apiJSON(method, path, body){
   try{
     const res = await fetch(path, { method, credentials: 'same-origin', headers: {'Content-Type':'application/json'}, body: body ? JSON.stringify(body) : undefined });
-    const j = await res.json().catch(()=> ({}));
-    if(!res.ok) return { error: j.error || j.message || 'request failed', status: res.status };
+    const raw = await res.text();
+    let j = {};
+    try{ j = raw ? JSON.parse(raw) : {}; }catch(parseErr){
+      // server did not return JSON (e.g. an HTML error page from a missing route) - surface the raw text so it's not a silent failure
+      if(!res.ok) return { error: `เซิร์ฟเวอร์ตอบกลับไม่ถูกต้อง (HTTP ${res.status}): ${raw.slice(0,200)}`, status: res.status };
+    }
+    if(!res.ok) return { error: j.error || j.message || `คำขอไม่สำเร็จ (HTTP ${res.status})`, status: res.status };
     return j;
   }catch(e){
     return { error: String(e) };
@@ -326,6 +331,18 @@ function showApp(){
 function hideApp(){
   const sb = document.querySelector('.sidebar'); if(sb) sb.style.display='none';
   const mn = document.querySelector('.main'); if(mn) mn.style.display='none';
+}
+
+// ---- determine if the logged-in user has admin/delete rights.
+// Different backends may name this field differently, so check several common variants
+// instead of relying on a single exact property name (this was one reason the delete
+// button silently failed to appear / act for some admin accounts).
+function isSuperAdmin(u){
+  if(!u) return false;
+  if(u.isSuperAdmin || u.isAdmin || u.admin || u.superAdmin) return true;
+  if(typeof u.role === 'string' && /admin/i.test(u.role)) return true;
+  if(typeof u.username === 'string' && /^admin$/i.test(u.username)) return true;
+  return false;
 }
 
 // ---- load current logged-in user from server, update header/avatar/login state ----
@@ -456,7 +473,7 @@ function renderList(){
     wrap.innerHTML = `<div class="empty-list">ไม่มีหนังสือในหมวดนี้</div>`;
     return;
   }
-  const isAdmin = loggedUser && loggedUser.isSuperAdmin;
+  const isAdmin = isSuperAdmin(loggedUser);
   wrap.innerHTML = list.map((d)=>{
     const i = docs.indexOf(d);
     const s = statusOf(d);
@@ -469,24 +486,27 @@ function renderList(){
     </div>`;
   }).join('');
   wrap.querySelectorAll('.doc-card').forEach(card=>{
-    card.onclick = (e)=>{ if(e.target.classList.contains('del-doc-btn')) return; selectedIdx = parseInt(card.dataset.i); renderList(); renderDetail(); };
+    card.onclick = (e)=>{ if(e.target.closest('.del-doc-btn')) return; selectedIdx = parseInt(card.dataset.i); renderList(); renderDetail(); };
   });
   wrap.querySelectorAll('.del-doc-btn').forEach(btn=>{
     btn.onclick = async (e)=>{
+      e.preventDefault();
       e.stopPropagation();
       const id = btn.dataset.delid;
       if(!confirm('ยืนยันลบหนังสือฉบับนี้ถาวร? การลบนี้กู้คืนไม่ได้')) return;
-      try{
-        const r = await fetch('/api/docs/'+id, { method:'DELETE', credentials:'same-origin' });
-        const j = await r.json();
-        if(r.ok){
-          showToast('🗑️ ลบหนังสือเรียบร้อยแล้ว');
-          selectedIdx = null;
-          await loadDocsFromServer();
-        } else {
-          showToast('❌ ลบไม่สำเร็จ: '+(j.error||'ไม่ทราบสาเหตุ'));
-        }
-      }catch(err){ showToast('❌ เกิดข้อผิดพลาดในการลบ'); }
+      btn.style.pointerEvents = 'none';
+      btn.textContent = '⏳';
+      const res = await apiJSON('DELETE', '/api/docs/'+id);
+      if(!res || !res.error){
+        showToast('🗑️ ลบหนังสือเรียบร้อยแล้ว', 'success');
+        if(docs[selectedIdx] && docs[selectedIdx].id===id) selectedIdx = null;
+        await loadDocsFromServer();
+      } else {
+        console.error('ลบหนังสือไม่สำเร็จ:', res.error);
+        showToast('❌ ลบไม่สำเร็จ: '+res.error, 'error');
+        btn.style.pointerEvents = '';
+        btn.textContent = '🗑️';
+      }
     };
   });
 }
@@ -541,10 +561,16 @@ function renderDetail(){
       inner = `<div class="rung-note">${c.note}</div>${fileChips}${sigImg}`;
     } else if(c.state==='active'){
       circleCls='active'; cardCls='active';
-      const canAct = (currentRole===-1 || currentRole===i);
+      // Access rule: a position can act on this step if it IS this step's level,
+      // or if it is a HIGHER level than this step (higher index in LEVELS = higher rank).
+      // A lower-ranked position may never act on a higher step. The admin overview (-1) can always act.
+      const canAct = (currentRole===-1 || currentRole>=i);
+      const isDelegated = (currentRole!==-1 && currentRole>i);
       if(canAct){
         const fileChips = c.files.map((f,fi)=>`<span class="file-chip">📎 ${f.name}<span class="rm" data-rmfile="${fi}">✕</span></span>`).join('');
+        const delegateNote = isDelegated ? `<div class="locked-note" style="border-color:var(--gold-light);color:var(--navy);">ℹ️ คุณกำลังเกษียนแทนตำแหน่ง "${lvl.role}" ในฐานะผู้บังคับบัญชาระดับสูงกว่า (${LEVELS[currentRole].role})</div>` : '';
         inner = `
+          ${delegateNote}
           <textarea class="note-input" id="noteInput" placeholder="พิมพ์ความเห็น / คำสั่งการก่อนเกษียนและส่งต่อ...">${c.note||''}</textarea>
           <div class="note-warn" id="noteWarn">กรุณาพิมพ์ความเห็น และเซ็นชื่อในช่องลายเซ็นก่อนเกษียนและส่งต่อ</div>
           <div class="file-row" id="fileRow">${fileChips}</div>
@@ -560,7 +586,7 @@ function renderDetail(){
             ${i>0 ? `<button class="btn-sm back" id="btnBack">↩ ตีกลับขั้นก่อนหน้า</button>` : ''}
           </div>`;
       } else {
-        inner = `<div class="locked-note">🔒 อยู่ระหว่างพิจารณาโดย ${lvl.role} — สลับมุมมองไปตำแหน่งนี้เพื่อดำเนินการ</div>`;
+        inner = `<div class="locked-note">🔒 อยู่ระหว่างพิจารณาโดย ${lvl.role} — เฉพาะตำแหน่งนี้หรือผู้บังคับบัญชาระดับสูงกว่าเท่านั้นที่ดำเนินการได้</div>`;
       }
     } else {
       inner = `<div class="rung-note empty">ยังไม่ถึงคิวพิจารณา</div>`;
@@ -591,7 +617,7 @@ function renderDetail(){
     <div class="chain"><div class="chain-line"></div>${rungsHtml}</div>
   `;
 
-  if(activeIdx!==-1 && (currentRole===-1 || currentRole===activeIdx)){
+  if(activeIdx!==-1 && (currentRole===-1 || currentRole>=activeIdx)){
     const pad = document.getElementById('sigPad');
     if(pad) setupSigPad(pad);
     document.getElementById('clearSig').onclick = ()=> pad._clear();
@@ -630,21 +656,21 @@ function renderDetail(){
 
 function forward(d, idx, text, sigData){
   (async ()=>{
-    const res = await apiJSON('POST', `/api/docs/${d.id}/forward`, { idx, text, signature: sigData, files: d.chain[idx].files });
+    const res = await apiJSON('POST', `/api/docs/${d.id}/forward`, { idx, text, signature: sigData, files: d.chain[idx].files, actingRole: currentRole });
     if(res && res.id){
       await loadDocsFromServer();
       showToast('🔔 ส่งเรื่องเรียบร้อย', 'success');
     }else{
-      showToast('ไม่สามารถส่งเรื่องได้ (ตรวจสอบสิทธิ์หรือเข้าสู่ระบบ)', '');
+      showToast('ไม่สามารถส่งเรื่องได้ (ตรวจสอบสิทธิ์หรือเข้าสู่ระบบ)' + (res && res.error ? ': '+res.error : ''), 'error');
     }
   })();
 }
 
 function sendBack(d, idx){
   (async ()=>{
-    const res = await apiJSON('POST', `/api/docs/${d.id}/back`, { idx });
+    const res = await apiJSON('POST', `/api/docs/${d.id}/back`, { idx, actingRole: currentRole });
     if(res && res.id){ await loadDocsFromServer(); showToast('↩ ตีกลับเรียบร้อย'); }
-    else showToast('ไม่สามารถตีกลับได้ (ตรวจสอบสิทธิ์)', '');
+    else showToast('ไม่สามารถตีกลับได้ (ตรวจสอบสิทธิ์)' + (res && res.error ? ': '+res.error : ''), 'error');
   })();
 }
 
@@ -817,7 +843,7 @@ document.getElementById('submitNew').onclick = async ()=>{
   const payload = { title, author, urgent, files };
   const resp = await apiJSON('POST','/api/docs', payload);
   if(resp && resp.id){ docs.unshift(resp); selectedIdx = 0; showToast('📄 สร้างหนังสือใหม่เรียบร้อย', 'success'); closeModal(); renderList(); renderDetail(); }
-  else { showToast('ไม่สามารถสร้างหนังสือได้ (ต้องเข้าสู่ระบบ)', ''); }
+  else { showToast('ไม่สามารถสร้างหนังสือได้ (ต้องเข้าสู่ระบบ)' + (resp && resp.error ? ': '+resp.error : ''), 'error'); }
 };
 
 // initial load: check auth and fetch docs
