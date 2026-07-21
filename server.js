@@ -93,6 +93,16 @@ function isSuperAdminUser(user){
   return Boolean(user && (user.isSuperAdmin || user.username === 'piwkung007' || user.roleIndex === -1));
 }
 
+// ตำแหน่งสูงกว่าหรือเท่ากับขั้นที่ i ถึงจะดำเนินการที่ขั้นนั้นได้ (roleIndex ยิ่งมาก = ตำแหน่งยิ่งสูง)
+// ผู้ปฏิบัติงาน(0) ทำได้แค่ขั้นตัวเอง, นายก(6) ทำแทนได้ทุกขั้น, ผู้ต่ำกว่าทำแทนขั้นที่สูงกว่าไม่ได้
+function canActOnStep(user, stepIdx){
+  if(!user) return false;
+  if(isSuperAdminUser(user)) return true;
+  const r = Number(user.roleIndex);
+  if(Number.isNaN(r)) return false;
+  return r >= stepIdx;
+}
+
 function buildUserPayload(user){
   return {
     id: user.id,
@@ -250,8 +260,13 @@ app.post('/api/docs/:id/forward', (req, res) => {
 
   const i = idx;
   if(!doc.chain[i]) return res.status(400).json({ error: 'invalid idx' });
-  if(!(user && (isSuperAdminUser(user) || user.roleIndex === -1 || user.roleIndex === i))){ return res.status(403).json({ error: 'forbidden' }); }
+  // ตำแหน่งสูงกว่าหรือเท่ากับขั้นนี้ (หรือแอดมิน) เท่านั้นที่เกษียนแทนได้
+  if(!canActOnStep(user, i)){ return res.status(403).json({ error: 'forbidden' }); }
 
+  // บันทึกชื่อผู้ที่เกษียนจริง (เผื่อเป็นผู้บังคับบัญชาที่เกษียนแทน) และตำแหน่งของขั้นนั้นยังคงอยู่เหมือนเดิม
+  if(user && !doc.chain[i].name){
+    doc.chain[i].name = user.fullName || user.name || user.username;
+  }
   doc.chain[i].note = text || doc.chain[i].note;
   doc.chain[i].date = new Date().toLocaleDateString('th-TH');
   doc.chain[i].state = 'done';
@@ -277,7 +292,8 @@ app.post('/api/docs/:id/back', (req, res) => {
   if(!doc) return res.status(404).json({ error: 'not found' });
   const i = idx;
   if(!doc.chain[i] || i-1 < 0) return res.status(400).json({ error: 'invalid idx' });
-  if(!(user && (isSuperAdminUser(user) || user.roleIndex === -1 || user.roleIndex === i))){ return res.status(403).json({ error: 'forbidden' }); }
+  // ตำแหน่งสูงกว่าหรือเท่ากับขั้นนี้ (หรือแอดมิน) เท่านั้นที่ตีกลับได้
+  if(!canActOnStep(user, i)){ return res.status(403).json({ error: 'forbidden' }); }
 
   doc.chain[i].state = 'wait';
   doc.chain[i].note = '';
@@ -297,6 +313,23 @@ app.put('/api/docs/:id', (req, res) => {
   Object.assign(doc, req.body);
   saveDocs(docs);
   res.json(doc);
+});
+
+// API: delete a document (admin only) — เดิมไม่มี route นี้เลย เป็นสาเหตุที่ปุ่มลบใช้งานไม่ได้
+app.delete('/api/docs/:id', (req, res) => {
+  const s = getSessionFromReq(req);
+  if(!s) return res.status(401).json({ error: 'unauthenticated' });
+  const users = loadUsers();
+  const user = users.find(u => u.id === s.userId);
+  if(!isSuperAdminUser(user)) return res.status(403).json({ error: 'forbidden: admin only' });
+
+  const docs = loadDocs();
+  const idx = docs.findIndex(d => d.id === req.params.id);
+  if(idx === -1) return res.status(404).json({ error: 'not found' });
+
+  const [removed] = docs.splice(idx, 1);
+  saveDocs(docs);
+  res.json({ ok: true, id: removed.id });
 });
 
 // Fallback to index.html for SPA routes (use app.use to avoid path-to-regexp)
