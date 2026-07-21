@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<title>ระบบเกษียนหนังสือ | เทศบาลตำบลพระเหลา</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#0B2A4A; --navy-deep:#071c33;
+    --gold:#B8922E; --gold-light:#E8D9A8;
+    --cream:#F6F3EC; --paper:#FFFFFF; --ink:#2A2E35; --ink-soft:#6B7280;
+    --line:#E4E0D6; --green:#3B7A57; --amber:#C77B2C; --red:#A23B3B;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Sarabun',sans-serif;background:var(--cream);color:var(--ink);display:flex;min-height:100vh;font-size:15px;}
+
+  .sidebar{width:250px;background:linear-gradient(180deg,var(--navy) 0%,var(--navy-deep) 100%);color:#EFEAE0;display:flex;flex-direction:column;flex-shrink:0;padding:26px 0;}
+  .sidebar-header{display:flex;flex-direction:column;align-items:center;padding:20px;text-align:center;border-bottom:1px solid rgba(255,255,255,0.12);margin-bottom:18px;}
+  .sidebar-logo{width:80px;height:80px;display:block;margin:0 auto 15px auto;border-radius:50%;object-fit:cover;}
+  .brand-text .b1{font-size:14px;font-weight:700;color:#fff;margin:0;}
+  .brand-text .b2{font-size:11.5px;color:#B9C4D4;margin-top:2px;margin:0;}
+  nav{padding:0 12px;}
+  .nav-label{font-size:11px;letter-spacing:1.2px;color:#7C8DA6;padding:10px 12px 6px;text-transform:uppercase;font-weight:600;}
+  .nav-item{display:flex;align-items:center;gap:10px;justify-content:space-between;padding:10px 12px;border-radius:8px;color:#D8DFEA;font-size:14px;cursor:pointer;margin-bottom:2px;}
+  .nav-item:hover{background:rgba(255,255,255,0.06);}
+  .nav-item.active{background:rgba(184,146,46,0.18);color:#fff;font-weight:600;border-left:3px solid var(--gold);padding-left:9px;}
+  .nav-left{display:flex;align-items:center;gap:10px;}
+  .nav-dot{width:6px;height:6px;border-radius:50%;background:#7C8DA6;flex-shrink:0;}
+  .nav-item.active .nav-dot{background:var(--gold);}
+  .sidebar-foot{margin-top:auto;padding:16px 22px 0;border-top:1px solid rgba(255,255,255,0.1);font-size:11px;color:#8494AC;line-height:1.6;}
+
+  .main{flex:1;display:flex;flex-direction:column;min-width:0;}
+  .topbar{min-height:64px;background:var(--paper);border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:10px 28px;flex-shrink:0;gap:16px;flex-wrap:wrap;}
+  .topbar h1{font-size:17px;font-weight:700;color:var(--navy);}
+  .topbar .sub{font-size:12px;color:var(--ink-soft);margin-top:2px;}
+  .top-actions{display:flex;align-items:center;gap:12px;}
+  .role-select{font-family:inherit;font-size:13px;padding:8px 12px;border-radius:8px;border:1px solid var(--line);background:#fff;color:var(--ink);cursor:pointer;font-weight:600;}
+  .btn-primary{background:var(--navy);color:#fff;border:none;padding:9px 18px;border-radius:8px;font-family:inherit;font-size:13.5px;font-weight:600;cursor:pointer;}
+  .btn-primary:hover{background:var(--navy-deep);}
+  .avatar-mini{width:34px;height:34px;border-radius:50%;background:var(--gold-light);display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--navy);font-size:13px;flex-shrink:0;}
+
+  .workspace{flex:1;display:flex;overflow:hidden;}
+  .doc-list{width:330px;flex-shrink:0;border-right:1px solid var(--line);background:var(--paper);overflow-y:auto;padding:16px;}
+  .filter-row{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;}
+  .chip{font-size:12px;padding:6px 12px;border-radius:20px;border:1px solid var(--line);color:var(--ink-soft);cursor:pointer;background:#fff;}
+  .chip.on{background:var(--navy);color:#fff;border-color:var(--navy);}
+  .doc-card{border:1px solid var(--line);border-radius:var(--radius);padding:13px 14px;margin-bottom:10px;cursor:pointer;background:#fff;}
+  .doc-card:hover{box-shadow:0 2px 10px rgba(11,42,74,0.08);}
+  .doc-card.sel{border-color:var(--gold);background:#FEFBF3;}
+  .doc-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;}
+  .doc-no{font-size:11px;color:var(--ink-soft);font-weight:600;}
+  .doc-title{font-size:13.5px;font-weight:600;line-height:1.4;margin:4px 0 8px;}
+  .status-badge{font-size:10.5px;padding:3px 9px;border-radius:20px;font-weight:600;white-space:nowrap;}
+  .status-pending{background:#FBEBD6;color:var(--amber);}
+  .status-done{background:#DFEEE4;color:var(--green);}
+  .status-urgent{background:#F5DEDE;color:var(--red);}
+  .doc-where{font-size:11px;color:var(--ink-soft);}
+  .empty-list{padding:60px 16px;text-align:center;color:var(--ink-soft);font-size:13px;line-height:1.9;}
+  .empty-list b{color:var(--navy);}
+
+  .detail{flex:1;overflow-y:auto;padding:26px 34px;}
+  .detail-head{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);padding:20px 24px;margin-bottom:22px;}
+  .detail-head .no{font-size:12px;color:var(--gold);font-weight:700;margin-bottom:6px;}
+  .detail-head h2{font-size:19px;color:var(--navy);margin-bottom:10px;}
+  .detail-tags{display:flex;gap:16px;flex-wrap:wrap;font-size:12.5px;color:var(--ink-soft);align-items:center;}
+  .detail-tags b{color:var(--ink);font-weight:600;}
+  .print-btn{margin-left:auto;background:var(--green);color:#fff;border:none;padding:8px 16px;border-radius:8px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;}
+
+  .section-title{font-size:13px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.6px;margin:6px 0 18px;display:flex;align-items:center;gap:10px;}
+  .section-title::after{content:'';flex:1;height:1px;background:var(--line);}
+
+  .chain{position:relative;padding-left:6px;}
+  .chain-line{position:absolute;left:29px;top:22px;bottom:22px;width:2px;background:repeating-linear-gradient(180deg, var(--line) 0 6px, transparent 6px 11px);}
+  .rung{display:flex;gap:18px;position:relative;margin-bottom:6px;}
+  .rung-node{width:60px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;position:relative;z-index:1;}
+  .node-circle{width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;background:#fff;border:2px solid var(--line);color:var(--ink-soft);}
+  .node-circle.done{border-color:var(--green);color:var(--green);background:#EFF7F2;}
+  .node-circle.active{border-color:var(--gold);color:var(--navy);background:#FEFBF3;box-shadow:0 0 0 4px rgba(184,146,46,0.15);}
+  .node-lvl{font-size:10px;color:var(--ink-soft);margin-top:6px;text-align:center;line-height:1.3;}
+
+  .rung-card{flex:1;background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;margin-bottom:18px;}
+  .rung-card.active{border-color:var(--gold);box-shadow:0 2px 10px rgba(184,146,46,0.12);}
+  .rung-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;gap:10px;}
+  .rung-role{font-size:12px;color:var(--gold);font-weight:700;}
+  .rung-name{font-size:14.5px;font-weight:600;margin-top:2px;}
+  .rung-date{font-size:11.5px;color:var(--ink-soft);white-space:nowrap;}
+  .rung-note{font-size:13px;line-height:1.6;background:var(--cream);border-radius:6px;padding:9px 12px;margin-top:6px;border-left:3px solid var(--gold-light);}
+  .rung-note.empty{color:var(--ink-soft);font-style:italic;background:transparent;border:1px dashed var(--line);}
+  .note-input{width:100%;border:1px solid var(--line);font-family:inherit;font-size:13px;resize:vertical;min-height:60px;border-radius:6px;padding:9px 11px;}
+  .note-input:focus{border-color:var(--gold);outline:none;}
+  .note-warn{font-size:11.5px;color:var(--red);margin-top:5px;display:none;}
+  .file-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;}
+  .file-chip{font-size:11.5px;background:var(--cream);border:1px solid var(--line);border-radius:20px;padding:5px 10px 5px 8px;display:flex;align-items:center;gap:6px;cursor:pointer;}
+  .file-chip .rm{cursor:pointer;color:var(--ink-soft);font-weight:700;}
+  .file-chip .rm:hover{color:var(--red);}
+  .rung-actions{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;}
+  .btn-sm{font-size:12px;padding:7px 14px;border-radius:6px;border:1px solid var(--line);background:#fff;cursor:pointer;font-family:inherit;font-weight:600;color:var(--ink-soft);}
+  .btn-sm:hover{background:#F5F2EA;}
+  .btn-sm.go{background:var(--navy);color:#fff;border-color:var(--navy);}
+  .btn-sm.go:hover{background:var(--navy-deep);}
+  .btn-sm.back{color:var(--red);}
+  .locked-note{font-size:12px;color:var(--ink-soft);background:var(--cream);border:1px dashed var(--line);border-radius:6px;padding:9px 12px;margin-top:6px;}
+
+  .sig-box{margin-top:12px;}
+  .sig-label{font-size:12px;font-weight:600;color:var(--navy);margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;}
+  .sig-pad-wrap{border:1.5px dashed var(--line);border-radius:8px;background:#fff;position:relative;}
+  canvas.sigpad{display:block;width:100%;height:130px;touch-action:none;cursor:crosshair;border-radius:8px;}
+  .sig-placeholder{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:#C9C4B6;font-size:12.5px;pointer-events:none;}
+  .sig-done{border-color:var(--green);background:#F6FBF8;}
+  .sig-thumb{height:44px;border:1px solid var(--line);border-radius:6px;background:#fff;margin-top:6px;}
+
+  .toast-stack{position:fixed;bottom:22px;right:22px;display:flex;flex-direction:column;gap:10px;z-index:200;}
+  .toast{background:var(--navy-deep);color:#fff;padding:12px 16px;border-radius:9px;font-size:12.5px;max-width:300px;line-height:1.5;animation:slidein .25s ease-out;border-left:3px solid var(--gold);}
+  .toast.success{border-left-color:var(--green);}
+  .toast.error{background:#fff0f0;color:var(--red);border-left-color:var(--red);border:1px solid rgba(162,59,59,0.12);}
+  @keyframes slidein{from{transform:translateX(30px);opacity:0;}to{transform:translateX(0);opacity:1;}}
+  .toast.fadeout{animation:fadeout .35s ease-in forwards;}
+  @keyframes fadeout{to{opacity:0;}}
+
+  .modal-back{position:fixed;inset:0;background:rgba(11,20,33,0.55);display:none;align-items:center;justify-content:center;z-index:100;}
+  .modal-back.open{display:flex;}
+  .modal{background:#fff;border-radius:14px;width:480px;max-width:92vw;max-height:88vh;overflow-y:auto;padding:26px 28px;}
+  .modal h3{color:var(--navy);font-size:17px;margin-bottom:4px;}
+  .modal .mhint{font-size:12px;color:var(--ink-soft);margin-bottom:18px;}
+  .field{margin-bottom:15px;}
+  .field label{font-size:12.5px;font-weight:600;display:block;margin-bottom:6px;}
+  .field input[type=text], .field select{width:100%;border:1px solid var(--line);border-radius:7px;padding:9px 11px;font-family:inherit;font-size:13.5px;}
+  .modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:20px;}
+
+  /* ===== PRINT VIEW ===== */
+  #printArea{display:none;}
+  .p-doc{width:100%;max-width:780px;margin:0 auto;font-family:'Sarabun',sans-serif;color:#111;}
+  .p-head{text-align:center;margin-bottom:18px;}
+  .p-head .crest{font-size:12px;color:#555;}
+  .p-head h2{font-size:18px;margin-top:6px;}
+  .p-meta{display:flex;justify-content:space-between;font-size:13px;margin-bottom:16px;border-bottom:1px solid #333;padding-bottom:8px;}
+  .p-title{font-size:14.5px;font-weight:700;margin-bottom:18px;line-height:1.6;}
+  .p-block{border:1px solid #999;border-radius:4px;padding:12px 14px;margin-bottom:12px;page-break-inside:avoid;}
+  .p-block .role{font-size:12px;font-weight:700;color:#333;}
+  .p-block .note{font-size:13px;margin:6px 0 10px;line-height:1.6;}
+  .p-sign-row{display:flex;justify-content:space-between;align-items:flex-end;margin-top:8px;}
+  .p-sign-row img{height:50px;}
+  .p-sign-row .who{font-size:12px;text-align:right;line-height:1.5;}
+  .p-noline{font-size:12px;color:#999;font-style:italic;}
+
+  @media print{
+    body *{visibility:hidden;}
+    #printArea, #printArea *{visibility:visible;}
+    #printArea{display:block;position:absolute;top:0;left:0;width:100%;padding:20px;}
+  }
+
+  ::-webkit-scrollbar{width:8px;} ::-webkit-scrollbar-thumb{background:#D6D0C2;border-radius:8px;}
+</style>
+</head>
+<body>
+
+<div id="landing" style="position:fixed;inset:0;background:linear-gradient(180deg,#F6F3EC, #fff);z-index:150;display:flex;align-items:center;justify-content:center;">
+  <div style="max-width:960px;width:92%;display:flex;gap:28px;align-items:stretch">
+    <div style="flex:1;background:linear-gradient(180deg,var(--navy),var(--navy-deep));color:#fff;border-radius:14px;padding:28px;box-shadow:0 6px 30px rgba(11,42,74,0.12);">
+      <div style="font-size:20px;font-weight:800;margin-bottom:6px">ระบบสารบรรณอิเล็กทรอนิกส์</div>
+      <div style="font-size:14px;opacity:0.9;margin-bottom:18px">เทศบาลตำบลพระเหลา — ระบบจัดการสายการเกษียนหนังสือราชการ</div>
+      <p style="opacity:0.9;line-height:1.6">ระบบนี้สงวนสิทธิ์ให้เฉพาะเจ้าหน้าที่ของเทศบาลตำบลพระเหลา กรุณาเข้าสู่ระบบหรือสมัครสมาชิกสำหรับเจ้าหน้าที่เพื่อใช้งาน</p>
+      <div style="margin-top:18px;display:flex;gap:10px;"><button class="btn-primary" id="landingLogin">เข้าสู่ระบบ</button><button class="btn-sm" id="landingRegister">สมัครสมาชิก</button></div>
+    </div>
+    <div id="landingPane" style="width:420px;background:#fff;border-radius:14px;padding:20px;box-shadow:0 6px 30px rgba(11,42,74,0.06)">
+      <!-- content injected by JS: landingShowLogin() or landingShowRegister() -->
+    </div>
+  </div>
+</div>
+
+<div class="sidebar" style="display:none">
+  <div class="sidebar-header">
+    <img src="logo.png" alt="โลโก้เทศบาลตำบลพระเหลา" class="sidebar-logo">
+    <div class="brand-text"><div class="b1">เทศบาลตำบลพระเหลา</div><div class="b2">ระบบเกษียนหนังสือราชการ</div></div>
+  </div>
+  <nav id="navList">
+    <div class="nav-label">เมนูหลัก</div>
+    <div class="nav-item active" data-filter="all"><span class="nav-left"><span class="nav-dot"></span> หนังสือทั้งหมด</span></div>
+    <div class="nav-item" data-action="new"><span class="nav-left"><span class="nav-dot"></span> สร้างหนังสือใหม่</span></div>
+    <div class="nav-item" data-filter="done"><span class="nav-left"><span class="nav-dot"></span> เสร็จสิ้น/พิมพ์ได้</span></div>
+  </nav>
+  <div class="sidebar-foot">
+    สร้างและพัฒนาโดย พิวพนา โทบุตร
+  </div>
+</div>
+
+<div class="main" style="display:none">
+  <div class="topbar">
+    <div>
+      <h1>หนังสือราชการ — สายการเกษียน</h1>
+      <div class="sub">ผู้ปฏิบัติงาน → หัวหน้างาน → หัวหน้าฝ่าย → หัวหน้าสำนัก/ผอ. → ปลัดเทศบาล → รองนายก → นายกเทศมนตรี</div>
+    </div>
+    <div class="top-actions">
+      <select class="role-select" id="roleSelect"></select>
+      <button class="btn-primary" id="newDocBtn">+ สร้างหนังสือใหม่</button>
+      <button class="btn-primary" id="loginBtn">เข้าสู่ระบบ</button>
+      <button class="btn-primary" id="logoutBtn" style="display:none">ออกจากระบบ</button>
+      <div class="avatar-mini" id="avatarMini">ธก</div>
+    </div>
+  </div>
+
+  <div class="workspace">
+    <div class="doc-list" id="docList">
+      <div class="filter-row">
+        <div class="chip on" data-chip="all">ทั้งหมด</div>
+        <div class="chip" data-chip="pending">รอพิจารณา</div>
+        <div class="chip" data-chip="done">เสร็จสิ้น</div>
+        <div class="chip" data-chip="urgent">ด่วนที่สุด</div>
+      </div>
+      <div id="docCards"></div>
+    </div>
+    <div class="detail" id="detail"></div>
+  </div>
+</div>
+
+<div class="toast-stack" id="toastStack"></div>
+
+<div class="modal-back" id="modalBack">
+  <div class="modal">
+    <h3>สร้างหนังสือราชการใหม่</h3>
+    <div class="mhint">แนบไฟล์ต้นเรื่อง (สแกน/ถ่ายรูป/PDF) ได้เลย จะติดไปกับหนังสือทุกขั้นตอน</div>
+    <div class="field"><label>เรื่อง</label><input type="text" id="newTitle" placeholder="เช่น ขออนุมัติจัดซื้อ..."></div>
+    <div class="field"><label>ผู้เสนอเรื่อง (ผู้ปฏิบัติงาน)</label><input type="text" id="newAuthor" placeholder="ชื่อ-สกุลผู้จัดทำหนังสือ"></div>
+    <div class="field"><label>ชั้นความเร็ว</label>
+      <select id="newSpeed"><option value="pending">ปกติ</option><option value="urgent">ด่วนที่สุด</option></select>
+    </div>
+    <div class="field"><label>แนบไฟล์ / สแกนเอกสารต้นเรื่อง</label>
+      <input type="file" id="newFile" multiple accept="image/*,application/pdf">
+    </div>
+    <div class="modal-actions">
+      <button class="btn-sm" id="cancelNew">ยกเลิก</button>
+      <button class="btn-sm go" id="submitNew">สร้างและเข้าสู่สายเกษียน</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-back" id="loginBack">
+  <div class="modal">
+    <h3>เข้าสู่ระบบเจ้าหน้าที่</h3>
+    <div class="mhint">กรุณาเข้าสู่ระบบด้วยบัญชีเจ้าหน้าที่</div>
+    <div class="field"><label>ชื่อผู้ใช้งาน</label><input type="text" id="loginUser" placeholder="username"></div>
+    <div class="field"><label>รหัสผ่าน</label><input type="password" id="loginPass" placeholder="password"></div>
+    <div class="modal-actions">
+      <button class="btn-sm" id="cancelLogin">ยกเลิก</button>
+      <button class="btn-sm go" id="submitLogin">เข้าสู่ระบบ</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-back" id="registerBack">
+  <div class="modal">
+    <h3>สมัครสมาชิก เจ้าหน้าที่เทศบาล</h3>
+    <div class="mhint">กรุณากรอกข้อมูลเจ้าหน้าที่เพื่อยืนยันการสมัคร</div>
+    <div class="field"><label>ชื่อ-นามสกุล</label><input type="text" id="regName" placeholder="เช่น นายสมชาย ใจดี"></div>
+    <div class="field"><label>ตำแหน่ง / ส่วนราชการ</label><input type="text" id="regDept" placeholder="เช่น ฝ่ายแผนงาน"></div>
+    <div class="field"><label>สิทธิ์การใช้งาน</label>
+      <select id="regRole">
+        <option value="0">ผู้ปฏิบัติงาน</option>
+        <option value="1">หัวหน้างาน</option>
+        <option value="2">หัวหน้าฝ่าย / ผอ.กอง</option>
+        <option value="3">หัวหน้าสำนัก / ผอ.</option>
+        <option value="4">ปลัดเทศบาล</option>
+        <option value="5">รองนายกเทศมนตรี</option>
+        <option value="6">นายกเทศมนตรี</option>
+      </select>
+    </div>
+    <div class="field"><label>ชื่อผู้ใช้งาน (Username)</label><input type="text" id="regUser" placeholder="username"></div>
+    <div class="field"><label>รหัสผ่าน</label><input type="password" id="regPass" placeholder="password"></div>
+    <div class="field"><label>ยืนยันรหัสผ่าน</label><input type="password" id="regPass2" placeholder="confirm password"></div>
+    <div class="modal-actions">
+      <button class="btn-sm" id="cancelReg">ยกเลิก</button>
+      <button class="btn-sm go" id="submitReg">สมัครสมาชิก</button>
+    </div>
+  </div>
+</div>
+
+<div id="printArea"></div>
+
+<script>
+const LEVELS = [
+  {role:"ผู้ปฏิบัติงาน", short:"จนท."},
+  {role:"หัวหน้างาน", short:"หน.งาน"},
+  {role:"หัวหน้าฝ่าย", short:"หน.ฝ่าย"},
+  {role:"หัวหน้าสำนัก / ผอ.กอง", short:"ผอ."},
+  {role:"ปลัดเทศบาล", short:"ปลัด"},
+  {role:"รองนายกเทศมนตรี", short:"รองนายก"},
+  {role:"นายกเทศมนตรี", short:"นายก"},
+];
+const PEOPLE = [null,"นางสาวสมหญิง รักงาน","นายประเสริฐ มั่นคง","นางวิไล ผลบุญ","นายสมพงษ์ ปลัดเมือง","นายวิชัย รองนายก","นายกเทศมนตรีตำบลพระเหลา"];
+
+function todayStr(){
+  const d=new Date();
+  const months=["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
+  const beYear = d.getFullYear() + 543;
+  return `${d.getDate()} ${months[d.getMonth()]} ${beYear}`;
+}
+function fileToDataURL(file){
+  return new Promise((resolve)=>{
+    const r = new FileReader();
+    r.onload = ()=>resolve({name:file.name, dataUrl:r.result});
+    r.readAsDataURL(file);
+  });
+}
+
+// ---- Authentication & API helpers ----
+let loggedUser = null;
+async function apiJSON(method, path, body){
+  try{
+    const res = await fetch(path, { method, credentials: 'same-origin', headers: {'Content-Type':'application/json'}, body: body ? JSON.stringify(body) : undefined });
+    const j = await res.json().catch(()=> ({}));
+    if(!res.ok) return { error: j.error || j.message || 'request failed', status: res.status };
+    return j;
+  }catch(e){
+    return { error: String(e) };
+  }
+}
+async function loadMe(){
+  try{
+    const r = await fetch('/api/me', { credentials: 'same-origin' });
+    const j = await r.json();
+    loggedUser = j.user;
+    if(loggedUser){
+      document.getElementById('loginBtn').style.display='none';
+      document.getElementById('logoutBtn').style.display='inline-block';
+      const initials = (loggedUser.name||'').split(' ').map(s=>s[0]).slice(0,2).join('');
+      document.getElementById('avatarMini').textContent = initials || 'ผก';
+      currentRole = (typeof loggedUser.roleIndex==='number' && loggedUser.roleIndex>=0) ? loggedUser.roleIndex : -1;
+      // hide landing
+      const land = document.getElementById('landing'); if(land) land.style.display='none';
+      showApp();
+      await loadDocsFromServer();
+    } else {
+      document.getElementById('loginBtn').style.display='inline-block';
+      document.getElementById('logoutBtn').style.display='none';
+      document.getElementById('avatarMini').textContent = 'ธก';
+      currentRole = -1;
+      // show landing
+      const land = document.getElementById('landing'); if(land) land.style.display='flex';
+      hideApp();
+    }
+    renderRoleSelect(); renderList(); renderDetail();
+  }catch(e){ console.error(e); }
+}
+
+function showApp(){ document.querySelector('.sidebar').style.display='flex'; document.querySelector('.main').style.display='flex'; }
+function hideApp(){ document.querySelector('.sidebar').style.display='none'; document.querySelector('.main').style.display='none'; }
+
+async function loadDocsFromServer(){
+  try{
+    const r = await fetch('/api/docs', { credentials: 'same-origin' });
+    const j = await r.json();
+    docs = Array.isArray(j) ? j : [];
+    docSeq = docs.reduce((m,d)=>Math.max(m,d.seq||0),0);
+    if(docs.length>0 && selectedIdx===null) selectedIdx = 0;
+    renderList(); renderDetail();
+  }catch(e){ console.error('load docs', e); }
+}
+
+
+let docSeq = 0;
+let docs = [];          // starts empty — real use, no sample data
+let selectedIdx = null;
+let currentRole = -1;
+let activeFilter = 'all';
+let navFilter = 'all';
+
+function showToast(text, kind){
+  const stack = document.getElementById('toastStack');
+  const el = document.createElement('div');
+  el.className = 'toast' + (kind==='success' ? ' success': (kind==='error' ? ' error' : ''));
+  el.innerHTML = text;
+  stack.appendChild(el);
+  setTimeout(()=>{ el.classList.add('fadeout'); setTimeout(()=>el.remove(),350); }, 3000);
+}
+
+function statusOf(d){
+  if(d.chain.every(c=>c.state==='done')) return 'done';
+  if(d.urgent) return 'urgent';
+  return 'pending';
+}
+function statusLabel(s){
+  if(s==='pending') return ['status-pending','รอพิจารณา'];
+  if(s==='done') return ['status-done','เสร็จสิ้น'];
+  return ['status-urgent','ด่วนที่สุด'];
+}
+function whereText(d){
+  const idx = d.chain.findIndex(c=>c.state==='active');
+  if(idx===-1) return 'เกษียนครบทุกขั้นแล้ว — พิมพ์เอกสารได้';
+  return 'อยู่ที่ '+LEVELS[idx].role;
+}
+
+function renderRoleSelect(){
+  const sel = document.getElementById('roleSelect');
+  sel.innerHTML = `<option value="-1">มุมมองภาพรวม (ธุรการกลาง)</option>` +
+    LEVELS.map((l,i)=>`<option value="${i}">สวมบทบาท: ${l.role}</option>`).join('');
+  sel.value = currentRole;
+  sel.onchange = ()=>{
+    currentRole = parseInt(sel.value);
+    document.getElementById('avatarMini').textContent = currentRole===-1 ? 'ธก' : LEVELS[currentRole].short.slice(0,2);
+    renderList(); renderDetail();
+  };
+}
+
+document.getElementById('navList').addEventListener('click',(e)=>{
+  const item = e.target.closest('.nav-item');
+  if(!item) return;
+  if(item.dataset.action==='new'){ openModal(); return; }
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  item.classList.add('active');
+  navFilter = item.dataset.filter;
+  activeFilter='all';
+  document.querySelectorAll('.chip').forEach(c=>c.classList.toggle('on', c.dataset.chip==='all'));
+  renderList();
+});
+
+document.querySelectorAll('.chip').forEach(chip=>{
+  chip.addEventListener('click', ()=>{
+    document.querySelectorAll('.chip').forEach(c=>c.classList.remove('on'));
+    chip.classList.add('on');
+    activeFilter = chip.dataset.chip;
+    navFilter='all';
+    document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('active', n.dataset.filter==='all'));
+    renderList();
+  });
+});
+
+function visibleDocs(){
+  return docs.filter((d)=>{
+    const s = statusOf(d);
+    if(activeFilter==='pending' && s==='done') return false;
+    if(activeFilter==='done' && s!=='done') return false;
+    if(activeFilter==='urgent' && s!=='urgent') return false;
+    if(navFilter==='done' && s!=='done') return false;
+    return true;
+  });
+}
+
+function renderList(){
+  const wrap = document.getElementById('docCards');
+  const list = visibleDocs();
+  if(docs.length===0){
+    wrap.innerHTML = `<div class="empty-list">ยังไม่มีหนังสือในระบบ<br><br>กด <b>"+ สร้างหนังสือใหม่"</b> ด้านบนเพื่อเริ่มต้นใช้งานจริง</div>`;
+    return;
+  }
+  if(list.length===0){
+    wrap.innerHTML = `<div class="empty-list">ไม่มีหนังสือในหมวดนี้</div>`;
+    return;
+  }
+  wrap.innerHTML = list.map((d)=>{
+    const i = docs.indexOf(d);
+    const s = statusOf(d);
+    const [cls,label] = statusLabel(s);
+    return `<div class="doc-card ${i===selectedIdx?'sel':''}" data-i="${i}">
+      <div class="doc-top"><span class="doc-no">${d.no}</span><span class="status-badge ${cls}">${label}</span></div>
+      <div class="doc-title">${d.title}</div>
+      <div class="doc-where">${whereText(d)}</div>
+    </div>`;
+  }).join('');
+  wrap.querySelectorAll('.doc-card').forEach(card=>{
+    card.onclick = ()=>{ selectedIdx = parseInt(card.dataset.i); renderList(); renderDetail(); };
+  });
+}
+
+/* ===== SIGNATURE PAD ===== */
+function setupSigPad(canvas){
+  const ctx = canvas.getContext('2d');
+  function resize(){
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width * 2; canvas.height = rect.height * 2;
+    ctx.scale(2,2); ctx.lineWidth=2; ctx.lineCap='round'; ctx.strokeStyle='#0B2A4A';
+  }
+  resize();
+  let drawing=false, hasDrawn=false;
+  function pos(e){
+    const rect = canvas.getBoundingClientRect();
+    const t = e.touches ? e.touches[0] : e;
+    return {x:t.clientX-rect.left, y:t.clientY-rect.top};
+  }
+  function start(e){ drawing=true; const p=pos(e); ctx.beginPath(); ctx.moveTo(p.x,p.y); e.preventDefault(); }
+  function move(e){ if(!drawing) return; const p=pos(e); ctx.lineTo(p.x,p.y); ctx.stroke(); hasDrawn=true;
+    const ph=canvas.parentElement.querySelector('.sig-placeholder'); if(ph) ph.style.display='none';
+    canvas.parentElement.classList.add('sig-done'); e.preventDefault(); }
+  function end(){ drawing=false; }
+  canvas.addEventListener('mousedown', start); canvas.addEventListener('mousemove', move); window.addEventListener('mouseup', end);
+  canvas.addEventListener('touchstart', start); canvas.addEventListener('touchmove', move); canvas.addEventListener('touchend', end);
+  canvas._hasDrawn = ()=>hasDrawn;
+  canvas._clear = ()=>{ ctx.clearRect(0,0,canvas.width,canvas.height); hasDrawn=false;
+    const ph=canvas.parentElement.querySelector('.sig-placeholder'); if(ph) ph.style.display='block';
+    canvas.parentElement.classList.remove('sig-done'); };
+}
+
+function renderDetail(){
+  const d = docs[selectedIdx];
+  const el = document.getElementById('detail');
+  if(!d){ el.innerHTML = `<div class="empty-list">เลือกหนังสือทางด้านซ้าย หรือสร้างหนังสือใหม่เพื่อเริ่มใช้งาน</div>`; return; }
+  const s = statusOf(d);
+  const [cls,label] = statusLabel(s);
+  const activeIdx = d.chain.findIndex(c=>c.state==='active');
+  const isDone = activeIdx===-1;
+
+  let rungsHtml = '';
+  d.chain.forEach((c,i)=>{
+    const lvl = LEVELS[i];
+    let circleCls='', cardCls='', inner='';
+    const nameLine = c.name ? c.name : `<span style="color:var(--ink-soft);font-weight:400;">(รอมอบหมาย)</span>`;
+
+    if(c.state==='done'){
+      circleCls='done';
+      const fileChips = (c.files&&c.files.length) ? `<div class="file-row">${c.files.map(f=>`<a class="file-chip" href="${f.dataUrl}" target="_blank">📎 ${f.name}</a>`).join('')}</div>` : '';
+      const sigImg = c.signature ? `<img class="sig-thumb" src="${c.signature}">` : '';
+      inner = `<div class="rung-note">${c.note}</div>${fileChips}${sigImg}`;
+    } else if(c.state==='active'){
+      circleCls='active'; cardCls='active';
+      const canAct = (currentRole===-1 || currentRole===i);
+      if(canAct){
+        const fileChips = c.files.map((f,fi)=>`<span class="file-chip">📎 ${f.name}<span class="rm" data-rmfile="${fi}">✕</span></span>`).join('');
+        inner = `
+          <textarea class="note-input" id="noteInput" placeholder="พิมพ์ความเห็น / คำสั่งการก่อนเกษียนและส่งต่อ...">${c.note||''}</textarea>
+          <div class="note-warn" id="noteWarn">กรุณาพิมพ์ความเห็น และเซ็นชื่อในช่องลายเซ็นก่อนเกษียนและส่งต่อ</div>
+          <div class="file-row" id="fileRow">${fileChips}</div>
+          <div class="rung-actions">
+            <label class="btn-sm" style="cursor:pointer;">📎 แนบไฟล์ / สแกนเอกสาร<input type="file" id="attachInput" multiple accept="image/*,application/pdf" style="display:none;"></label>
+          </div>
+          <div class="sig-box">
+            <div class="sig-label"><span>ลายเซ็นกำกับ (${lvl.role})</span><button class="btn-sm" id="clearSig" type="button">ล้างลายเซ็น</button></div>
+            <div class="sig-pad-wrap"><canvas class="sigpad" id="sigPad"></canvas><span class="sig-placeholder">เซ็นชื่อในกรอบนี้ด้วยเมาส์หรือนิ้ว</span></div>
+          </div>
+          <div class="rung-actions">
+            <button class="btn-sm go" id="btnForward">✓ เกษียนและส่งต่อ</button>
+            ${i>0 ? `<button class="btn-sm back" id="btnBack">↩ ตีกลับขั้นก่อนหน้า</button>` : ''}
+          </div>`;
+      } else {
+        inner = `<div class="locked-note">🔒 อยู่ระหว่างพิจารณาโดย ${lvl.role} — สลับมุมมองไปตำแหน่งนี้เพื่อดำเนินการ</div>`;
+      }
+    } else {
+      inner = `<div class="rung-note empty">ยังไม่ถึงคิวพิจารณา</div>`;
+    }
+
+    rungsHtml += `
+      <div class="rung">
+        <div class="rung-node"><div class="node-circle ${circleCls}">${i+1}</div><div class="node-lvl">${lvl.short}</div></div>
+        <div class="rung-card ${cardCls}">
+          <div class="rung-top"><div><div class="rung-role">${lvl.role}</div><div class="rung-name">${nameLine}</div></div><div class="rung-date">${c.date||''}</div></div>
+          ${inner}
+        </div>
+      </div>`;
+  });
+
+  el.innerHTML = `
+    <div class="detail-head">
+      <div class="no">${d.no}</div>
+      <h2>${d.title}</h2>
+      <div class="detail-tags">
+        <div><b>สถานะ:</b> <span class="status-badge ${cls}">${label}</span></div>
+        <div><b>อยู่ที่ขั้นตอน:</b> ${whereText(d)}</div>
+        <div><b>ชั้นความเร็ว:</b> ${d.urgent ? 'ด่วนที่สุด' : 'ปกติ'}</div>
+        ${isDone ? `<button class="print-btn" id="printBtn">🖨️ พิมพ์เอกสารฉบับสมบูรณ์</button>` : ''}
+      </div>
+    </div>
+    <div class="section-title">สายการเกษียน (จากผู้ปฏิบัติงานถึงนายกเทศมนตรี)</div>
+    <div class="chain"><div class="chain-line"></div>${rungsHtml}</div>
+  `;
+
+  if(activeIdx!==-1 && (currentRole===-1 || currentRole===activeIdx)){
+    const pad = document.getElementById('sigPad');
+    if(pad) setupSigPad(pad);
+    document.getElementById('clearSig').onclick = ()=> pad._clear();
+
+    const attachInput = document.getElementById('attachInput');
+    attachInput.onchange = async (e)=>{
+      const files = Array.from(e.target.files);
+      for(const f of files){
+        const res = await fileToDataURL(f);
+        d.chain[activeIdx].files.push(res);
+      }
+      showToast(`📎 แนบไฟล์เรียบร้อย (${files.length} ไฟล์)`);
+      renderDetail();
+    };
+    document.querySelectorAll('[data-rmfile]').forEach(x=>{
+      x.onclick = ()=>{ d.chain[activeIdx].files.splice(parseInt(x.dataset.rmfile),1); renderDetail(); };
+    });
+
+    document.getElementById('btnForward').onclick = ()=>{
+      const input = document.getElementById('noteInput');
+      const text = input.value.trim();
+      if(!text || !pad._hasDrawn()){
+        document.getElementById('noteWarn').style.display='block';
+        return;
+      }
+      const sigData = pad.toDataURL('image/png');
+      forward(d, activeIdx, text, sigData);
+    };
+    const btnBack = document.getElementById('btnBack');
+    if(btnBack) btnBack.onclick = ()=> sendBack(d, activeIdx);
+  }
+
+  const printBtn = document.getElementById('printBtn');
+  if(printBtn) printBtn.onclick = ()=> printDocument(d);
+}
+
+function forward(d, idx, text, sigData){
+  // call server to forward
+  (async ()=>{
+    const res = await apiJSON('POST', `/api/docs/${d.id}/forward`, { idx, text, signature: sigData, files: d.chain[idx].files });
+    if(res && res.id){
+      await loadDocsFromServer();
+      showToast('🔔 ส่งเรื่องเรียบร้อย', 'success');
+    }else{
+      showToast('ไม่สามารถส่งเรื่องได้ (ตรวจสอบสิทธิ์หรือเข้าสู่ระบบ)', '');
+    }
+  })();
+}
+
+function sendBack(d, idx){
+  (async ()=>{
+    const res = await apiJSON('POST', `/api/docs/${d.id}/back`, { idx });
+    if(res && res.id){ await loadDocsFromServer(); showToast('↩ ตีกลับเรียบร้อย'); }
+    else showToast('ไม่สามารถตีกลับได้ (ตรวจสอบสิทธิ์)', '');
+  })();
+}
+
+/* ===== PRINT ===== */
+function printDocument(d){
+  const blocks = d.chain.map((c,i)=>{
+    const lvl = LEVELS[i];
+    const sig = c.signature ? `<img src="${c.signature}">` : `<span class="p-noline">(ไม่มีลายเซ็น)</span>`;
+    return `<div class="p-block">
+      <div class="role">${lvl.role}</div>
+      <div class="note">${c.note || '-'}</div>
+      <div class="p-sign-row">
+        ${sig}
+        <div class="who">ลงชื่อ .......................................<br>( ${c.name||'-'} )<br>วันที่ ${c.date||'-'}</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('printArea').innerHTML = `
+    <div class="p-doc">
+      <div class="p-head"><div class="crest">เทศบาลตำบลพระเหลา</div><h2>บันทึกข้อความ — สายการเกษียนหนังสือ</h2></div>
+      <div class="p-meta"><span>${d.no}</span><span>วันที่พิมพ์: ${todayStr()}</span></div>
+      <div class="p-title">เรื่อง: ${d.title}</div>
+      ${blocks}
+    </div>`;
+  window.print();
+}
+
+/* ===== NEW DOC MODAL ===== */
+function openModal(){ document.getElementById('modalBack').classList.add('open'); }
+function closeModal(){
+  document.getElementById('modalBack').classList.remove('open');
+  document.getElementById('newTitle').value=''; document.getElementById('newAuthor').value=''; document.getElementById('newFile').value='';
+}
+document.getElementById('newDocBtn').onclick = openModal;
+document.getElementById('cancelNew').onclick = closeModal;
+document.getElementById('modalBack').addEventListener('click',(e)=>{ if(e.target.id==='modalBack') closeModal(); });
+
+// Login modal handlers
+document.getElementById('loginBtn').onclick = ()=> document.getElementById('loginBack').classList.add('open');
+document.getElementById('cancelLogin').onclick = ()=> document.getElementById('loginBack').classList.remove('open');
+document.getElementById('loginBack').addEventListener('click',(e)=>{ if(e.target.id==='loginBack') document.getElementById('loginBack').classList.remove('open'); });
+document.getElementById('submitLogin').onclick = async (e)=>{
+  if(e && e.preventDefault) e.preventDefault();
+  const u = document.getElementById('loginUser').value.trim();
+  const p = document.getElementById('loginPass').value.trim();
+  if(!u||!p){ showToast('กรุณากรอกชื่อผู้ใช้งานและรหัสผ่าน','error'); return; }
+  const res = await apiJSON('POST','/api/login',{ username:u, password:p });
+  if(res && res.user){ document.getElementById('loginBack').classList.remove('open'); showToast('ยินดีต้อนรับ ' + (res.user.name||res.user.username),'success'); await loadMe(); }
+  else showToast(res && res.error ? res.error : 'รหัสผ่านไม่ถูกต้อง หรือไม่มีบัญชีนี้', 'error');
+};
+
+document.getElementById('logoutBtn').onclick = async ()=>{
+  await fetch('/api/logout',{ method:'POST', credentials:'same-origin' });
+  loggedUser = null; await loadMe(); await loadDocsFromServer(); showToast('ออกจากระบบแล้ว');
+};
+
+// landing quick handlers and form swap
+function landingShowLogin(){
+  const pane = document.getElementById('landingPane');
+  pane.innerHTML = `
+    <h3 style="color:var(--navy);margin-bottom:6px">เข้าสู่ระบบเจ้าหน้าที่</h3>
+    <div style="font-size:13px;color:var(--ink-soft);margin-bottom:12px">เข้าสู่ระบบเพื่อดูและจัดการหนังสือราชการ</div>
+    <div class="field"><label>ชื่อผู้ใช้งาน</label><input type="text" id="landingUser" placeholder="username"></div>
+    <div class="field"><label>รหัสผ่าน</label><input type="password" id="landingPass" placeholder="password"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px"><button class="btn-sm" id="landingCancel">ยกเลิก</button><button class="btn-sm go" id="landingSubmit">เข้าสู่ระบบ</button></div>
+  `;
+  document.getElementById('landingCancel').onclick = ()=>{ document.getElementById('landingUser').value=''; document.getElementById('landingPass').value=''; };
+  document.getElementById('landingSubmit').onclick = async ()=>{
+    const u = document.getElementById('landingUser').value.trim();
+    const p = document.getElementById('landingPass').value.trim();
+    if(!u||!p){ showToast('กรุณากรอกชื่อผู้ใช้งานและรหัสผ่าน','error'); return; }
+    const res = await apiJSON('POST','/api/login',{ username:u, password:p });
+    if(res && res.user){ showToast('ยินดีต้อนรับ ' + (res.user.name||res.user.username),'success'); await loadMe(); }
+    else showToast(res && res.error ? res.error : 'รหัสผ่านไม่ถูกต้อง หรือไม่มีบัญชีนี้','error');
+  };
+}
+
+function landingShowRegister(){
+  const pane = document.getElementById('landingPane');
+  pane.innerHTML = `
+    <h3 style="color:var(--navy);margin-bottom:6px">สมัครสมาชิก เจ้าหน้าที่เทศบาล</h3>
+    <div style="font-size:13px;color:var(--ink-soft);margin-bottom:12px">กรอกข้อมูลเจ้าหน้าที่เพื่อลงทะเบียน</div>
+    <div class="field"><label>ชื่อ-นามสกุล</label><input type="text" id="regNameLanding" placeholder="เช่น นายสมชาย ใจดี"></div>
+    <div class="field"><label>ตำแหน่ง / ส่วนราชการ</label><input type="text" id="regDeptLanding" placeholder="เช่น ฝ่ายแผนงาน"></div>
+    <div class="field"><label>สิทธิ์การใช้งาน</label>
+      <select id="regRoleLanding">
+        <option value="0">ผู้ปฏิบัติงาน</option>
+        <option value="1">หัวหน้างาน</option>
+        <option value="2">หัวหน้าฝ่าย / ผอ.กอง</option>
+        <option value="3">หัวหน้าสำนัก / ผอ.</option>
+        <option value="4">ปลัดเทศบาล</option>
+        <option value="5">รองนายกเทศมนตรี</option>
+        <option value="6">นายกเทศมนตรี</option>
+      </select>
+    </div>
+    <div class="field"><label>ชื่อผู้ใช้งาน (Username)</label><input type="text" id="regUserLanding" placeholder="username"></div>
+    <div class="field"><label>รหัสผ่าน</label><input type="password" id="regPassLanding" placeholder="password"></div>
+    <div class="field"><label>ยืนยันรหัสผ่าน</label><input type="password" id="regPass2Landing" placeholder="confirm password"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px"><button class="btn-sm" id="regCancelLanding">ยกเลิก</button><button class="btn-sm go" id="regSubmitLanding">สมัครสมาชิก</button></div>
+  `;
+  document.getElementById('regCancelLanding').onclick = (e)=>{ if(e && e.preventDefault) e.preventDefault(); landingShowLogin(); };
+  document.getElementById('regSubmitLanding').onclick = async (e)=>{
+    if(e && e.preventDefault) e.preventDefault();
+    const fullName = document.getElementById('regNameLanding').value.trim();
+    const position = document.getElementById('regDeptLanding').value.trim();
+    const role = document.getElementById('regRoleLanding').value;
+    const username = document.getElementById('regUserLanding').value.trim();
+    const password = document.getElementById('regPassLanding').value;
+    const pass2 = document.getElementById('regPass2Landing').value;
+    if(!fullName || !position || !username || !password){ showToast('กรุณากรอกข้อมูลให้ครบถ้วน','error'); return; }
+    if(password !== pass2){ showToast('รหัสผ่านไม่ตรงกัน','error'); return; }
+
+    const registerData = { fullName, position, role, username, password };
+    const resp = await fetch('/api/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(registerData)
+    }).then(r => r.json()).catch(() => null);
+
+    if(resp && resp.success){
+      showToast(resp.message || 'สมัครสมาชิกเรียบร้อย','success');
+      landingShowLogin();
+    } else if(resp && resp.message){
+      showToast(resp.message, 'error');
+    } else {
+      showToast('ไม่สามารถสมัครสมาชิกได้ ลองใหม่อีกครั้ง','error');
+    }
+  };
+}
+
+// wire landing buttons
+document.getElementById('landingLogin').onclick = ()=> landingShowLogin();
+document.getElementById('landingRegister').onclick = ()=> landingShowRegister();
+// initialize landing with login form
+landingShowLogin();
+
+// registration handlers
+  document.getElementById('cancelReg').onclick = (e)=>{ if(e && e.preventDefault) e.preventDefault(); document.getElementById('registerBack').classList.remove('open'); };
+  document.getElementById('submitReg').onclick = async (e)=>{ if(e && e.preventDefault) e.preventDefault();
+  const fullName = document.getElementById('regName').value.trim();
+  const position = document.getElementById('regDept').value.trim();
+  const role = document.getElementById('regRole').value;
+  const username = document.getElementById('regUser').value.trim();
+  const password = document.getElementById('regPass').value;
+  const pass2 = document.getElementById('regPass2').value;
+  if(!fullName || !position || !username || !password) { showToast('กรุณากรอกข้อมูลให้ครบถ้วน','error'); return; }
+  if(password !== pass2){ showToast('รหัสผ่านไม่ตรงกัน','error'); return; }
+  const registerData = { fullName, position, role, username, password };
+  const resp = await fetch('/api/register', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(registerData)
+  }).then(r => r.json()).catch(() => null);
+  if(resp && resp.success){ document.getElementById('registerBack').classList.remove('open'); showToast(resp.message || 'สมัครสมาชิกเรียบร้อย', 'success');
+      landingShowLogin();
+    } else if(resp && resp.message){ showToast(resp.message,'error'); }
+    else { showToast('ไม่สามารถสมัครสมาชิกได้ ลองใหม่อีกครั้ง','error'); }
+};
+
+document.getElementById('submitNew').onclick = async ()=>{
+  const title = document.getElementById('newTitle').value.trim();
+  const author = document.getElementById('newAuthor').value.trim();
+  const urgent = document.getElementById('newSpeed').value === 'urgent';
+  if(!title){ alert('กรุณาระบุเรื่อง'); return; }
+  const rawFiles = Array.from(document.getElementById('newFile').files);
+  const files = [];
+  for(const f of rawFiles){ files.push(await fileToDataURL(f)); }
+
+  // send to server (requires login)
+  const payload = { title, author, urgent, files };
+  const resp = await apiJSON('POST','/api/docs', payload);
+  if(resp && resp.id){ docs.unshift(resp); selectedIdx = 0; showToast('📄 สร้างหนังสือใหม่เรียบร้อย', 'success'); closeModal(); renderList(); renderDetail(); }
+  else { showToast('ไม่สามารถสร้างหนังสือได้ (ต้องเข้าสู่ระบบ)', ''); }
+};
+
+// initial load: check auth and fetch docs
+loadMe();
+loadDocsFromServer();
+</script>
+</body>
+</html>

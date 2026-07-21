@@ -1,0 +1,85 @@
+[
+  {
+    "id": "u-staff",
+    "username": "staff1",
+    "password": "pass123",
+    "name": "เจ้าหน้าที่ ทดสอบ",
+    "roleIndex": 0
+  },
+  {
+    "id": "u-head",
+    "username": "head1",
+    "password": "pass123",
+    "name": "หัวหน้างาน สมชาย",
+    "roleIndex": 1
+  },
+  {
+    "id": "u-manager",
+    "username": "mgr1",
+    "password": "pass123",
+    "name": "หัวหน้าฝ่าย วิไล",
+    "roleIndex": 2
+  },
+  {
+    "id": "u-director",
+    "username": "dir1",
+    "password": "pass123",
+    "name": "ผอ.กอง สมพงษ์",
+    "roleIndex": 3
+  },
+  {
+    "id": "u-pld",
+    "username": "pld",
+    "password": "pass123",
+    "name": "ปลัดเทศบาล",
+    "roleIndex": 4
+  },
+  {
+    "id": "u-deputy",
+    "username": "deputy",
+    "password": "pass123",
+    "name": "รองนายก",
+    "roleIndex": 5
+  },
+  {
+    "id": "u-mayor",
+    "username": "mayor",
+    "password": "mayorpass",
+    "name": "นายกเทศมนตรี",
+    "roleIndex": 6
+  },
+  {
+    "id": "u-admin",
+    "username": "admin",
+    "password": "admin",
+    "name": "ผู้ดูแลระบบ",
+    "roleIndex": -1
+  },
+  {
+    "id": "u-1784608576776",
+    "fullName": "ทดสอบ ชื่อ",
+    "position": "ฝ่ายแผนงาน",
+    "username": "testreg1",
+    "password": "abc123",
+    "role": 0,
+    "roleIndex": 0
+  },
+  {
+    "id": "u-1784608658686",
+    "fullName": "นายพิวพนา โทบุตร",
+    "position": "พนักงานจ้างเหมาบริการ",
+    "username": "piwkung007",
+    "password": "0821289643za",
+    "role": 0,
+    "roleIndex": 0
+  },
+  {
+    "id": "u-1784608852397",
+    "fullName": "นายคงเดช มุคำ",
+    "position": "พนักงานจ้างเหมาบริการ",
+    "username": "piwkung008",
+    "password": "0821289643za",
+    "role": 2,
+    "roleIndex": 2
+  }
+]
