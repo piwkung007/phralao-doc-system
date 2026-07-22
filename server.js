@@ -93,14 +93,11 @@ function isSuperAdminUser(user){
   return Boolean(user && (user.isSuperAdmin || user.username === 'piwkung007' || user.roleIndex === -1));
 }
 
-// ตำแหน่งสูงกว่าหรือเท่ากับขั้นที่ i ถึงจะดำเนินการที่ขั้นนั้นได้ (roleIndex ยิ่งมาก = ตำแหน่งยิ่งสูง)
-// ผู้ปฏิบัติงาน(0) ทำได้แค่ขั้นตัวเอง, นายก(6) ทำแทนได้ทุกขั้น, ผู้ต่ำกว่าทำแทนขั้นที่สูงกว่าไม่ได้
+// [เปลี่ยนตามคำขอใหม่] เดิมจำกัดว่า roleIndex ของบัญชีต้อง >= ขั้นที่จะดำเนินการ (ตำแหน่งสูงกว่าเท่านั้นทำแทนได้)
+// ตอนนี้เปลี่ยนนโยบายเป็น: ผู้ใช้ที่ล็อกอินอยู่ (ได้รับบัญชีจากแอดมิน) ไม่ว่าตำแหน่งใด
+// สามารถเกษียน/ตีกลับได้ทุกขั้นตอนในสาย ไม่จำกัดลำดับตำแหน่งอีกต่อไป
 function canActOnStep(user, stepIdx){
-  if(!user) return false;
-  if(isSuperAdminUser(user)) return true;
-  const r = Number(user.roleIndex);
-  if(Number.isNaN(r)) return false;
-  return r >= stepIdx;
+  return Boolean(user);
 }
 
 function buildUserPayload(user){
@@ -116,7 +113,6 @@ function buildUserPayload(user){
   };
 }
 
-// Serve static public folder
 app.use(express.static(path.join(__dirname, 'public')));
 
 // AUTH: login / me / logout
@@ -125,7 +121,7 @@ app.post('/api/login', (req, res) => {
     ensureSeedUsers();
     const filePath = USERS_FILE;
     if (!fs.existsSync(filePath)) {
-      return res.status(400).json({ success: false, message: 'ไม่พบบัชีผ้ใช้งาน' });
+      return res.status(400).json({ success: false, message: 'ไม่พบชื่อบัญชีผู้ใช้งาน' });
     }
     const users = JSON.parse(fs.readFileSync(filePath, 'utf8') || '[]');
     const { username, password } = req.body || {};
@@ -136,55 +132,77 @@ app.post('/api/login', (req, res) => {
       try { res.cookie && res.cookie('sid', token, { httpOnly: true, sameSite: 'lax' }); } catch (e) { console.error('cookie set failed', e); }
       return res.json({ success: true, user: buildUserPayload(user) });
     } else {
-      return res.status(400).json({ success: false, message: 'ชื่อผ้ใช้หรือรหัสผ่านไม่ถกต้อง' });
+      return res.status(400).json({ success: false, message: 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง' });
     }
   } catch (error) {
     console.error('/api/login error', error);
     return res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาด' });
   }
 });
+// ==========================================
+// API สมัครสมาชิก (จำกัดสิทธิ์เฉพาะแอดมิน piwkung007)
+// ==========================================
 
-// API: register new user
+// 🔥 API: register new user (ล็อกสิทธิ์เฉพาะ Super Admin เท่านั้น)
 app.post('/api/register', (req, res) => {
   try {
-    const filePath = USERS_FILE;
-    let users = [];
-
-    if (!fs.existsSync(filePath)) {
-      ensureUsers();
-      fs.writeFileSync(filePath, JSON.stringify([], null, 2), 'utf8');
+    // 1. ตรวจสอบ Session คนที่กำลังเรียกใช้งานระบบ (ระบบเดิมของน้อง)
+    const s = getSessionFromReq(req);
+    if (!s) {
+      return res.status(401).json({ success: false, message: 'ปฏิเสธสิทธิ์: กรุณาเข้าสู่ระบบก่อนทำรายการ' });
     }
 
-    const fileData = fs.readFileSync(filePath, 'utf8');
-    users = JSON.parse(fileData || '[]');
+    // 2. ดึงข้อมูล User จากระบบมาเช็กสิทธิ์
+    const usersList = loadUsers();
+    const currentUser = usersList.find(u => u.id === s.userId);
 
-    const { fullName, position, role, username, password } = req.body || {};
-    if (!fullName || !position || typeof role === 'undefined' || !username || !password) {
-      return res.status(400).json({ success: false, message: 'กรุากรอกข้อมลให้ครบถ้วน' });
+    // 3. ตรวจสอบว่าเป็น Super Admin (piwkung007) หรือไม่
+    if (!currentUser || currentUser.username !== 'piwkung007') {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'ปฏิเสธสิทธิ์: เฉพาะ Super Admin (piwkung007) เท่านั้นที่สามารถสมัครสมาชิกให้ผู้อื่นได้!' 
+      });
     }
 
-    const userExists = users.some(u => u.username === username);
-    if (userExists) {
-      return res.status(400).json({ success: false, message: 'Username นี้ถกใช้งานแล้ว' });
+    // 4. รับข้อมูลจากฟอร์มหน้าบ้าน (ชื่อ, ตำแหน่ง, สิทธิ์, Username, Password)
+    const { fullName, position, role, username, password } = req.body;
+    if (!username || !password || !fullName || !position) {
+      return res.json({ success: false, error: 'กรุณากรอกข้อมูลให้ครบถ้วน' });
     }
 
-    const id = 'u-' + Date.now();
+    // 5. ตรวจสอบว่ามีชื่อผู้ใช้นี้อยู่แล้วหรือยัง
+    const existingUser = usersList.find(u => u.username === username);
+    if (existingUser) {
+      return res.json({ success: false, error: 'มีชื่อผู้ใช้นี้อยู่ในระบบแล้ว' });
+    }
+
+    // 6. สร้างข้อมูลผู้ใช้ใหม่พร้อมฟิลด์ครบถ้วนเก็บลงไฟล์
+    const roleIndexNum = Number(role);
     const newUser = {
-      id,
-      fullName,
-      position,
-      username,
-      password,
-      role: Number(role),
-      roleIndex: Number(role)
+      id: Date.now().toString(),
+      username: username,
+      password: password,
+      fullName: fullName,
+      position: position,
+      role: role,
+      roleIndex: Number.isNaN(roleIndexNum) ? 0 : roleIndexNum,
+      isSuperAdmin: false
     };
-    users.push(newUser);
-    fs.writeFileSync(filePath, JSON.stringify(users, null, 2), 'utf8');
 
-    return res.json({ success: true, message: 'สมัครสมาชิกสำเรจ' });
-  } catch (error) {
-    console.error('/api/register error', error);
-    return res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดบนเิรฟเวอร' });
+    // 7. บันทึกข้อมูลกลับลงระบบ
+    usersList.push(newUser);
+
+    if (typeof saveUsers === 'function') {
+      saveUsers(usersList);
+    } else {
+      const fs = require('fs');
+      fs.writeFileSync('./users.json', JSON.stringify(usersList, null, 2), 'utf8');
+    }
+
+    return res.json({ success: true });
+  } catch (err) {
+    console.error('Register error:', err);
+    return res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดในการบันทึกข้อมูล' });
   }
 });
 
@@ -232,14 +250,14 @@ app.post('/api/docs', (req, res) => {
   const docNo = `ที่ อบต.พล ${seq}/${beYear}`;
 
   const LEVELS_COUNT = 7;
-  const chain = Array.from({length:LEVELS_COUNT}).map((_,i)=>({
-    name: i===0 ? (author || '') : '',
-    date: '',
-    note: '',
-    state: i===0 ? 'active' : 'wait',
-    files: i===0 ? (files || []) : [],
-    signature: null
-  }));
+        const chain = Array.from({length:LEVELS_COUNT}).map((_,i)=>({
+            name: i===0 ? (author || '') : '',
+            date: '',
+            note: '',
+            state: 'active', // ✅ เปลี่ยนเป็น active ทั้งหมด เพื่อให้ทุกขั้นเปิดพร้อมใช้งานทันที ไม่ต้องรอคิว
+            files: i===0 ? (files || []) : [],
+            signature: null
+        }));
 
   if(u && !author) chain[0].name = u.fullName || u.name || u.username;
   const doc = { id: String(Date.now()), seq, no: docNo, title, urgent: !!urgent, chain };
@@ -248,9 +266,9 @@ app.post('/api/docs', (req, res) => {
   res.json(doc);
 });
 
-// API: forward a step (mark current index done, activate next)
+// API: forward a step
 app.post('/api/docs/:id/forward', (req, res) => {
-  const { idx, text, signature, files } = req.body;
+  const { idx, text, signature, files, actorName } = req.body;
   if(typeof idx !== 'number') return res.status(400).json({ error: 'missing idx' });
   const s = getSessionFromReq(req); if(!s) return res.status(401).json({ error: 'unauthenticated' });
   const users = loadUsers(); const user = users.find(u=>u.id===s.userId);
@@ -260,13 +278,15 @@ app.post('/api/docs/:id/forward', (req, res) => {
 
   const i = idx;
   if(!doc.chain[i]) return res.status(400).json({ error: 'invalid idx' });
-  // ตำแหน่งสูงกว่าหรือเท่ากับขั้นนี้ (หรือแอดมิน) เท่านั้นที่เกษียนแทนได้
+  // [เปลี่ยนตามคำขอใหม่] ใครก็ตามที่ล็อกอินอยู่ ทำขั้นตอนไหนก็ได้ (ดู canActOnStep ด้านบน)
   if(!canActOnStep(user, i)){ return res.status(403).json({ error: 'forbidden' }); }
 
-  // บันทึกชื่อผู้ที่เกษียนจริง (เผื่อเป็นผู้บังคับบัญชาที่เกษียนแทน) และตำแหน่งของขั้นนั้นยังคงอยู่เหมือนเดิม
-  if(user && !doc.chain[i].name){
-    doc.chain[i].name = user.fullName || user.name || user.username;
-  }
+  // [ใหม่] บันทึกชื่อผู้เกษียนจากช่องที่กรอกในป๊อปอัพฝั่งหน้าเว็บ (actorName)
+  // เพราะตอนนี้ใครก็เกษียนขั้นไหนก็ได้ ชื่อที่ขึ้นในเอกสารจึงต้องระบุเองว่าใครเป็นผู้เกษียนจริง
+  // ถ้าไม่ได้ส่ง actorName มา (เช่น เรียก API ตรงๆ) จะ fallback ไปใช้ชื่อบัญชีที่ล็อกอินแทน
+  const trimmedActorName = (typeof actorName === 'string') ? actorName.trim() : '';
+  doc.chain[i].name = trimmedActorName || (user && (user.fullName || user.name || user.username)) || doc.chain[i].name;
+
   doc.chain[i].note = text || doc.chain[i].note;
   doc.chain[i].date = new Date().toLocaleDateString('th-TH');
   doc.chain[i].state = 'done';
@@ -292,7 +312,7 @@ app.post('/api/docs/:id/back', (req, res) => {
   if(!doc) return res.status(404).json({ error: 'not found' });
   const i = idx;
   if(!doc.chain[i] || i-1 < 0) return res.status(400).json({ error: 'invalid idx' });
-  // ตำแหน่งสูงกว่าหรือเท่ากับขั้นนี้ (หรือแอดมิน) เท่านั้นที่ตีกลับได้
+  // [เปลี่ยนตามคำขอใหม่] ใครก็ตามที่ล็อกอินอยู่ ตีกลับขั้นตอนไหนก็ได้เช่นกัน
   if(!canActOnStep(user, i)){ return res.status(403).json({ error: 'forbidden' }); }
 
   doc.chain[i].state = 'wait';
@@ -315,7 +335,7 @@ app.put('/api/docs/:id', (req, res) => {
   res.json(doc);
 });
 
-// API: delete a document (admin only) — เดิมไม่มี route นี้เลย เป็นสาเหตุที่ปุ่มลบใช้งานไม่ได้
+// API: delete a document (admin only)
 app.delete('/api/docs/:id', (req, res) => {
   const s = getSessionFromReq(req);
   if(!s) return res.status(401).json({ error: 'unauthenticated' });
@@ -332,7 +352,6 @@ app.delete('/api/docs/:id', (req, res) => {
   res.json({ ok: true, id: removed.id });
 });
 
-// Fallback to index.html for SPA routes (use app.use to avoid path-to-regexp)
 app.use((req, res) => {
   const index = path.join(__dirname, 'public', 'index.html');
   if(fs.existsSync(index)) return res.sendFile(index);

@@ -162,8 +162,8 @@
     <div style="flex:1;background:linear-gradient(180deg,var(--navy),var(--navy-deep));color:#fff;border-radius:14px;padding:28px;box-shadow:0 6px 30px rgba(11,42,74,0.12);">
       <div style="font-size:20px;font-weight:800;margin-bottom:6px">ระบบสารบรรณอิเล็กทรอนิกส์</div>
       <div style="font-size:14px;opacity:0.9;margin-bottom:18px">เทศบาลตำบลพระเหลา — ระบบจัดการสายการเกษียนหนังสือราชการ</div>
-      <p style="opacity:0.9;line-height:1.6">ระบบนี้สงวนสิทธิ์ให้เฉพาะเจ้าหน้าที่ของเทศบาลตำบลพระเหลา กรุณาเข้าสู่ระบบหรือสมัครสมาชิกสำหรับเจ้าหน้าที่เพื่อใช้งาน สร้างเเละพัฒนาโดย พิวพนา โทบุตร</p>
-      <div style="margin-top:18px;display:flex;gap:10px;"><button class="btn-primary" id="landingLogin">เข้าสู่ระบบ</button><button class="btn-sm" id="landingRegister">สมัครสมาชิก</button></div>
+      <p style="opacity:0.9;line-height:1.6">ระบบนี้สงวนสิทธิ์ให้เฉพาะเจ้าหน้าที่ของเทศบาลตำบลพระเหลา กรุณาเข้าสู่ระบบหรือสมัครสมาชิกสำหรับเจ้าหน้าที่เพื่อใช้งาน</p>
+      <div style="margin-top:18px;display:flex;gap:10px;"><button class="btn-primary" id="landingLogin">เข้าสู่ระบบ</button><button class="btn-sm" id="landingRegister" style="display: none;">สมัครสมาชิก</button></div>
     </div>
     <div id="landingPane" style="width:420px;background:#fff;border-radius:14px;padding:20px;box-shadow:0 6px 30px rgba(11,42,74,0.06)">
       <!-- content injected by JS: landingShowLogin() or landingShowRegister() -->
@@ -181,6 +181,10 @@
     <div class="nav-item active" data-filter="all"><span class="nav-left"><span class="nav-dot"></span> หนังสือทั้งหมด</span></div>
     <div class="nav-item" data-action="new"><span class="nav-left"><span class="nav-dot"></span> สร้างหนังสือใหม่</span></div>
     <div class="nav-item" data-filter="done"><span class="nav-left"><span class="nav-dot"></span> เสร็จสิ้น/พิมพ์ได้</span></div>
+    <!-- เมนูสมัครสมาชิก (ซ่อนไว้เป็นค่าเริ่มต้น ให้เฉพาะแอดมินเห็น) -->
+<a href="#" id="sidebarRegisterBtn" style="display: none;" onclick="openRegisterModal()">
+  <i class="fa fa-user-plus"></i> สมัครสมาชิกผู้ใช้งาน
+</a>
   </nav>
   <div class="sidebar-foot">
     สร้างและพัฒนาโดย พิวพนา โทบุตร
@@ -250,6 +254,8 @@
   </div>
 </div>
 
+<!-- หน้าต่างสมัครสมาชิก — เหลือชุดเดียวเท่านั้น (ก่อนหน้านี้มีซ้ำ 3 ชุดในไฟล์ ทำให้ระบบสับสน
+     และเป็นสาเหตุที่คนอื่นสมัครสมาชิกได้ทั้งที่ควรเป็นสิทธิ์ของ piwkung007 เท่านั้น) -->
 <div class="modal-back" id="registerBack">
   <div class="modal">
     <h3>สมัครสมาชิก เจ้าหน้าที่เทศบาล</h3>
@@ -273,6 +279,21 @@
     <div class="modal-actions">
       <button class="btn-sm" id="cancelReg">ยกเลิก</button>
       <button class="btn-sm go" id="submitReg">สมัครสมาชิก</button>
+    </div>
+  </div>
+</div>
+
+<!-- [ใหม่] ป๊อปอัพให้กรอกชื่อผู้เกษียนก่อนส่งต่อไปตำแหน่งถัดไป
+     เพราะตอนนี้ทุกคนกดเกษียนได้ทุกขั้นในสาย ไม่ใช่แค่เจ้าของตำแหน่งจริง
+     จึงต้องให้ระบุชื่อผู้เกษียนจริงในขั้นนี้เอง ก่อนบันทึกและส่งต่อ -->
+<div class="modal-back" id="actorNameBack">
+  <div class="modal">
+    <h3>ยืนยันชื่อผู้เกษียน</h3>
+    <div class="mhint">กรุณาระบุชื่อ-สกุลของผู้ที่เกษียนหนังสือในขั้นตอนนี้ ก่อนบันทึกและส่งต่อไปยังตำแหน่งถัดไป</div>
+    <div class="field"><label>ชื่อผู้เกษียน</label><input type="text" id="actorNameInput" placeholder="เช่น นายสมชาย ใจดี"></div>
+    <div class="modal-actions">
+      <button class="btn-sm" id="actorNameCancel">ยกเลิก</button>
+      <button class="btn-sm go" id="actorNameConfirm">ยืนยันและส่งต่อ</button>
     </div>
   </div>
 </div>
@@ -310,13 +331,8 @@ let loggedUser = null;
 async function apiJSON(method, path, body){
   try{
     const res = await fetch(path, { method, credentials: 'same-origin', headers: {'Content-Type':'application/json'}, body: body ? JSON.stringify(body) : undefined });
-    const raw = await res.text();
-    let j = {};
-    try{ j = raw ? JSON.parse(raw) : {}; }catch(parseErr){
-      // server did not return JSON (e.g. an HTML error page from a missing route) - surface the raw text so it's not a silent failure
-      if(!res.ok) return { error: `เซิร์ฟเวอร์ตอบกลับไม่ถูกต้อง (HTTP ${res.status}): ${raw.slice(0,200)}`, status: res.status };
-    }
-    if(!res.ok) return { error: j.error || j.message || `คำขอไม่สำเร็จ (HTTP ${res.status})`, status: res.status };
+    const j = await res.json().catch(()=> ({}));
+    if(!res.ok) return { error: j.error || j.message || 'request failed', status: res.status };
     return j;
   }catch(e){
     return { error: String(e) };
@@ -331,18 +347,6 @@ function showApp(){
 function hideApp(){
   const sb = document.querySelector('.sidebar'); if(sb) sb.style.display='none';
   const mn = document.querySelector('.main'); if(mn) mn.style.display='none';
-}
-
-// ---- determine if the logged-in user has admin/delete rights.
-// Different backends may name this field differently, so check several common variants
-// instead of relying on a single exact property name (this was one reason the delete
-// button silently failed to appear / act for some admin accounts).
-function isSuperAdmin(u){
-  if(!u) return false;
-  if(u.isSuperAdmin || u.isAdmin || u.admin || u.superAdmin) return true;
-  if(typeof u.role === 'string' && /admin/i.test(u.role)) return true;
-  if(typeof u.username === 'string' && /^admin$/i.test(u.username)) return true;
-  return false;
 }
 
 // ---- load current logged-in user from server, update header/avatar/login state ----
@@ -460,8 +464,8 @@ function visibleDocs(){
   });
 }
 
-// NOTE: this is the ONLY definition of renderList in the file now (the duplicate
-// that had no delete button, which was silently overriding this one, has been removed).
+// NOTE: this is the ONLY definition of renderList in the file (a duplicate that
+// had no delete button used to override this one — removed in an earlier fix).
 function renderList(){
   const wrap = document.getElementById('docCards');
   const list = visibleDocs();
@@ -473,7 +477,7 @@ function renderList(){
     wrap.innerHTML = `<div class="empty-list">ไม่มีหนังสือในหมวดนี้</div>`;
     return;
   }
-  const isAdmin = isSuperAdmin(loggedUser);
+  const isAdmin = loggedUser && loggedUser.isSuperAdmin;
   wrap.innerHTML = list.map((d)=>{
     const i = docs.indexOf(d);
     const s = statusOf(d);
@@ -486,27 +490,24 @@ function renderList(){
     </div>`;
   }).join('');
   wrap.querySelectorAll('.doc-card').forEach(card=>{
-    card.onclick = (e)=>{ if(e.target.closest('.del-doc-btn')) return; selectedIdx = parseInt(card.dataset.i); renderList(); renderDetail(); };
+    card.onclick = (e)=>{ if(e.target.classList.contains('del-doc-btn')) return; selectedIdx = parseInt(card.dataset.i); renderList(); renderDetail(); };
   });
   wrap.querySelectorAll('.del-doc-btn').forEach(btn=>{
     btn.onclick = async (e)=>{
-      e.preventDefault();
       e.stopPropagation();
       const id = btn.dataset.delid;
       if(!confirm('ยืนยันลบหนังสือฉบับนี้ถาวร? การลบนี้กู้คืนไม่ได้')) return;
-      btn.style.pointerEvents = 'none';
-      btn.textContent = '⏳';
-      const res = await apiJSON('DELETE', '/api/docs/'+id);
-      if(!res || !res.error){
-        showToast('🗑️ ลบหนังสือเรียบร้อยแล้ว', 'success');
-        if(docs[selectedIdx] && docs[selectedIdx].id===id) selectedIdx = null;
-        await loadDocsFromServer();
-      } else {
-        console.error('ลบหนังสือไม่สำเร็จ:', res.error);
-        showToast('❌ ลบไม่สำเร็จ: '+res.error, 'error');
-        btn.style.pointerEvents = '';
-        btn.textContent = '🗑️';
-      }
+      try{
+        const r = await fetch('/api/docs/'+id, { method:'DELETE', credentials:'same-origin' });
+        const j = await r.json();
+        if(r.ok){
+          showToast('🗑️ ลบหนังสือเรียบร้อยแล้ว');
+          selectedIdx = null;
+          await loadDocsFromServer();
+        } else {
+          showToast('❌ ลบไม่สำเร็จ: '+(j.error||'ไม่ทราบสาเหตุ'));
+        }
+      }catch(err){ showToast('❌ เกิดข้อผิดพลาดในการลบ'); }
     };
   });
 }
@@ -561,16 +562,12 @@ function renderDetail(){
       inner = `<div class="rung-note">${c.note}</div>${fileChips}${sigImg}`;
     } else if(c.state==='active'){
       circleCls='active'; cardCls='active';
-      // Access rule: a position can act on this step if it IS this step's level,
-      // or if it is a HIGHER level than this step (higher index in LEVELS = higher rank).
-      // A lower-ranked position may never act on a higher step. The admin overview (-1) can always act.
-      const canAct = (currentRole===-1 || currentRole>=i);
-      const isDelegated = (currentRole!==-1 && currentRole>i);
+      // [เปลี่ยนตามคำขอใหม่] ทุกคนที่เข้าสู่ระบบแล้ว (ได้รับบัญชีจากแอดมิน) สามารถเกษียนได้ทุกขั้นตอนในสาย
+      // ไม่จำกัดตามลำดับตำแหน่งอีกต่อไป — เงื่อนไขเดียวที่เหลือคือ "ต้องล็อกอินอยู่"
+      const canAct = !!loggedUser;
       if(canAct){
         const fileChips = c.files.map((f,fi)=>`<span class="file-chip">📎 ${f.name}<span class="rm" data-rmfile="${fi}">✕</span></span>`).join('');
-        const delegateNote = isDelegated ? `<div class="locked-note" style="border-color:var(--gold-light);color:var(--navy);">ℹ️ คุณกำลังเกษียนแทนตำแหน่ง "${lvl.role}" ในฐานะผู้บังคับบัญชาระดับสูงกว่า (${LEVELS[currentRole].role})</div>` : '';
         inner = `
-          ${delegateNote}
           <textarea class="note-input" id="noteInput" placeholder="พิมพ์ความเห็น / คำสั่งการก่อนเกษียนและส่งต่อ...">${c.note||''}</textarea>
           <div class="note-warn" id="noteWarn">กรุณาพิมพ์ความเห็น และเซ็นชื่อในช่องลายเซ็นก่อนเกษียนและส่งต่อ</div>
           <div class="file-row" id="fileRow">${fileChips}</div>
@@ -586,7 +583,7 @@ function renderDetail(){
             ${i>0 ? `<button class="btn-sm back" id="btnBack">↩ ตีกลับขั้นก่อนหน้า</button>` : ''}
           </div>`;
       } else {
-        inner = `<div class="locked-note">🔒 อยู่ระหว่างพิจารณาโดย ${lvl.role} — เฉพาะตำแหน่งนี้หรือผู้บังคับบัญชาระดับสูงกว่าเท่านั้นที่ดำเนินการได้</div>`;
+        inner = `<div class="locked-note">🔒 กรุณาเข้าสู่ระบบก่อนดำเนินการเกษียนหนังสือ</div>`;
       }
     } else {
       inner = `<div class="rung-note empty">ยังไม่ถึงคิวพิจารณา</div>`;
@@ -617,7 +614,8 @@ function renderDetail(){
     <div class="chain"><div class="chain-line"></div>${rungsHtml}</div>
   `;
 
-  if(activeIdx!==-1 && (currentRole===-1 || currentRole>=activeIdx)){
+  // [เปลี่ยนตามคำขอใหม่] ผูก signature pad / ปุ่มต่างๆ เมื่อ "ล็อกอินอยู่" เท่านั้น ไม่เช็คลำดับตำแหน่งแล้ว
+  if(activeIdx!==-1 && loggedUser){
     const pad = document.getElementById('sigPad');
     if(pad) setupSigPad(pad);
     document.getElementById('clearSig').onclick = ()=> pad._clear();
@@ -644,7 +642,8 @@ function renderDetail(){
         return;
       }
       const sigData = pad.toDataURL('image/png');
-      forward(d, activeIdx, text, sigData);
+      // [ใหม่] แทนที่จะส่งไปเลย ให้เปิดป๊อปอัพถามชื่อผู้เกษียนก่อน แล้วค่อยส่งต่อ
+      openActorNameModal(d, activeIdx, text, sigData);
     };
     const btnBack = document.getElementById('btnBack');
     if(btnBack) btnBack.onclick = ()=> sendBack(d, activeIdx);
@@ -654,9 +653,34 @@ function renderDetail(){
   if(printBtn) printBtn.onclick = ()=> printDocument(d);
 }
 
-function forward(d, idx, text, sigData){
+/* ===== [ใหม่] ป๊อปอัพยืนยันชื่อผู้เกษียน ก่อนบันทึกและส่งต่อ ===== */
+let pendingForward = null;
+function openActorNameModal(d, idx, text, sigData){
+  pendingForward = { d, idx, text, sigData };
+  const input = document.getElementById('actorNameInput');
+  // เติมชื่อที่เคยบันทึกไว้ในขั้นนี้ (ถ้ามี) หรือชื่อบัญชีที่ล็อกอินอยู่ เป็นค่าเริ่มต้นให้แก้ไขได้
+  input.value = d.chain[idx].name || (loggedUser ? (loggedUser.name || loggedUser.fullName || loggedUser.username || '') : '');
+  document.getElementById('actorNameBack').classList.add('open');
+  setTimeout(()=>{ input.focus(); input.select(); }, 50);
+}
+function closeActorNameModal(){
+  document.getElementById('actorNameBack').classList.remove('open');
+  pendingForward = null;
+}
+document.getElementById('actorNameCancel').onclick = closeActorNameModal;
+document.getElementById('actorNameBack').addEventListener('click', (e)=>{ if(e.target.id==='actorNameBack') closeActorNameModal(); });
+document.getElementById('actorNameConfirm').onclick = ()=>{
+  const nameVal = document.getElementById('actorNameInput').value.trim();
+  if(!nameVal){ showToast('กรุณาระบุชื่อผู้เกษียนก่อนดำเนินการต่อ','error'); return; }
+  if(!pendingForward) return;
+  const { d, idx, text, sigData } = pendingForward;
+  closeActorNameModal();
+  forward(d, idx, text, sigData, nameVal);
+};
+
+function forward(d, idx, text, sigData, actorName){
   (async ()=>{
-    const res = await apiJSON('POST', `/api/docs/${d.id}/forward`, { idx, text, signature: sigData, files: d.chain[idx].files, actingRole: currentRole });
+    const res = await apiJSON('POST', `/api/docs/${d.id}/forward`, { idx, text, signature: sigData, files: d.chain[idx].files, actorName });
     if(res && res.id){
       await loadDocsFromServer();
       showToast('🔔 ส่งเรื่องเรียบร้อย', 'success');
@@ -668,7 +692,7 @@ function forward(d, idx, text, sigData){
 
 function sendBack(d, idx){
   (async ()=>{
-    const res = await apiJSON('POST', `/api/docs/${d.id}/back`, { idx, actingRole: currentRole });
+    const res = await apiJSON('POST', `/api/docs/${d.id}/back`, { idx });
     if(res && res.id){ await loadDocsFromServer(); showToast('↩ ตีกลับเรียบร้อย'); }
     else showToast('ไม่สามารถตีกลับได้ (ตรวจสอบสิทธิ์)' + (res && res.error ? ': '+res.error : ''), 'error');
   })();
@@ -808,9 +832,9 @@ document.getElementById('landingRegister').onclick = ()=> landingShowRegister();
 // initialize landing with login form
 landingShowLogin();
 
-// registration handlers
-  document.getElementById('cancelReg').onclick = (e)=>{ if(e && e.preventDefault) e.preventDefault(); document.getElementById('registerBack').classList.remove('open'); };
-  document.getElementById('submitReg').onclick = async (e)=>{ if(e && e.preventDefault) e.preventDefault();
+// registration handlers (ใช้กับ modal เดียวที่เหลืออยู่ตอนนี้: id="registerBack")
+document.getElementById('cancelReg').onclick = (e)=>{ if(e && e.preventDefault) e.preventDefault(); document.getElementById('registerBack').classList.remove('open'); };
+document.getElementById('submitReg').onclick = async (e)=>{ if(e && e.preventDefault) e.preventDefault();
   const fullName = document.getElementById('regName').value.trim();
   const position = document.getElementById('regDept').value.trim();
   const role = document.getElementById('regRole').value;
@@ -849,6 +873,38 @@ document.getElementById('submitNew').onclick = async ()=>{
 // initial load: check auth and fetch docs
 loadMe();
 loadDocsFromServer();
+</script>
+<script>
+  // เช็กสิทธิ์: ให้เฉพาะ piwkung007 เท่านั้นที่เห็นเมนู "สมัครสมาชิกผู้ใช้งาน" ใน Sidebar
+  fetch('/api/me')
+    .then(res => res.json())
+    .then(data => {
+      const sidebarRegBtn = document.getElementById('sidebarRegisterBtn');
+      if (!sidebarRegBtn) return;
+      if (data.user && data.user.username === 'piwkung007') {
+        sidebarRegBtn.style.display = 'flex';
+      } else {
+        sidebarRegBtn.style.display = 'none';
+      }
+    });
+
+  // เปิด/ปิดหน้าต่างสมัครสมาชิก — ใช้ modal เดียวกับ modal อื่นๆ ในระบบ (คลาส .open)
+  function openRegisterModal() {
+    const regBack = document.getElementById('registerBack');
+    if (regBack) regBack.classList.add('open');
+  }
+  function closeRegisterModal() {
+    const regBack = document.getElementById('registerBack');
+    if (regBack) regBack.classList.remove('open');
+  }
+
+  const sidebarRegBtn = document.getElementById('sidebarRegisterBtn');
+  if (sidebarRegBtn) {
+    sidebarRegBtn.onclick = (e) => {
+      e.preventDefault();
+      openRegisterModal();
+    };
+  }
 </script>
 </body>
 </html>

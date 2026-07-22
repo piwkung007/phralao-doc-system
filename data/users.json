@@ -70,8 +70,9 @@
     "position": "พนักงานจ้างเหมาบริการ",
     "username": "piwkung007",
     "password": "0821289643za",
-    "role": 0,
-    "roleIndex": 0
+    "role": -1,
+    "roleIndex": -1,
+    "isSuperAdmin": true
   },
   {
     "id": "u-1784608852397",
@@ -83,13 +84,84 @@
     "roleIndex": 2
   },
   {
-    "id": "u-1784623815565",
-    "fullName": "ชัยศรี พลเทพ",
-    "position": "นายก",
+    "id": "1784653517718",
+    "username": "piwkung001",
+    "password": "0821289643za",
+    "fullName": "หกดหกด",
+    "position": "หกดกหด",
+    "role": "user",
+    "isSuperAdmin": false
+  },
+  {
+    "id": "1784689301733",
+    "username": "piwkung0007",
+    "password": "0821289643za",
+    "fullName": "ทดสอบสมัคร",
+    "position": "หกดกหด",
+    "role": "user",
+    "isSuperAdmin": false
+  },
+  {
+    "id": "1784689715122",
     "username": "piwkung009",
     "password": "0821289643za",
-    "role": 6,
-    "roleIndex": 6,
+    "fullName": "ชัยศรี",
+    "position": "ทดสอบ",
+    "role": "user",
+    "isSuperAdmin": false
+  },
+  {
+    "id": "1784690054381",
+    "username": "000",
+    "password": "000",
+    "fullName": "ทดสอบสมัครอีกรอบ",
+    "position": "นายก",
+    "role": "admin",
+    "isSuperAdmin": false
+  },
+  {
+    "id": "1784693242173",
+    "username": "111",
+    "password": "111",
+    "fullName": "หกดหกด",
+    "position": "หฟกฟหก",
+    "role": "user",
+    "isSuperAdmin": false
+  },
+  {
+    "id": "1784695019238",
+    "username": "222",
+    "password": "222",
+    "fullName": "สมบัน มีทองเเสน",
+    "position": "รองนายก",
+    "role": "5",
+    "isSuperAdmin": false
+  },
+  {
+    "id": "1784702623299",
+    "username": "777",
+    "password": "777",
+    "fullName": "777",
+    "position": "777",
+    "role": "4",
+    "isSuperAdmin": false
+  },
+  {
+    "id": "1784703122493",
+    "username": "888",
+    "password": "888",
+    "fullName": "888",
+    "position": "888",
+    "role": "4",
+    "isSuperAdmin": false
+  },
+  {
+    "id": "1784703520116",
+    "username": "999",
+    "password": "999",
+    "fullName": "999",
+    "position": "999",
+    "role": "5",
     "isSuperAdmin": false
   }
 ]
