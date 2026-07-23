@@ -2,7 +2,7 @@
 <html lang="th">
 <head>
 <meta charset="UTF-8">
-<title>ระบบเกษียนหนังสือ | เทศบาลตำบลพระเหลา</title>
+<title>ระบบธุรการกลางสำนักปลัดเทศบาล | เทศบาลตำบลพระเหลา</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -146,11 +146,37 @@
   .p-sign-row .who{font-size:12px;text-align:right;line-height:1.5;}
   .p-noline{font-size:12px;color:#999;font-style:italic;}
 
+  /* [ใหม่] หน้าไฟล์แนบ (ต้นเรื่อง/สแกน) ที่พิมพ์ต่อท้ายในไฟล์เดียวกัน — ขึ้นหน้าใหม่ทุกไฟล์ */
+  .p-attach-page{page-break-before:always; padding-top:14px;}
+  .p-attach-label{font-size:12.5px;font-weight:700;color:#333;margin-bottom:10px;}
+  .p-attach-img{max-width:100%;display:block;}
+  .p-attach-pdf{width:100%;height:95vh;border:none;}
+
   @media print{
     body *{visibility:hidden;}
     #printArea, #printArea *{visibility:visible;}
     #printArea{display:block;position:absolute;top:0;left:0;width:100%;padding:20px;}
   }
+
+  /* ===== ช่องค้นหาในหน้าหนังสือทั้งหมด ===== */
+  .search-row{margin-bottom:12px;}
+  .search-row input{width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:20px;font-family:inherit;font-size:13px;background:#fff;}
+  .search-row input:focus{outline:none;border-color:var(--gold);}
+
+  /* ===== หน้าจอเต็มสำหรับ "ขอเลขหนังสือส่ง" / "ขอเลขคำสั่ง" ===== */
+  .full-view{flex:1;display:none;overflow-y:auto;padding:26px 34px;flex-direction:column;}
+  .full-view.open{display:flex;}
+  .fv-inner{max-width:100%;}
+  .fv-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:10px;}
+  .fv-head h2{font-size:19px;color:var(--navy);}
+  .fv-hint{font-size:12.5px;color:var(--ink-soft);margin-bottom:16px;}
+  .fv-table-wrap{overflow-x:auto;background:#fff;border:1px solid var(--line);border-radius:var(--radius);}
+  .fv-table{width:100%;border-collapse:collapse;font-size:13px;}
+  .fv-table th{background:var(--cream);color:var(--navy);text-align:left;padding:10px 12px;font-weight:700;white-space:nowrap;border-bottom:1px solid var(--line);}
+  .fv-table td{padding:10px 12px;border-bottom:1px solid #F0EDE4;vertical-align:top;}
+  .fv-table tr:last-child td{border-bottom:none;}
+  .fv-empty{text-align:center;color:var(--ink-soft);padding:30px;}
+  .fv-num-badge{display:inline-block;background:var(--navy);color:#fff;font-weight:700;padding:2px 10px;border-radius:20px;font-size:12.5px;}
 
   ::-webkit-scrollbar{width:8px;} ::-webkit-scrollbar-thumb{background:#D6D0C2;border-radius:8px;}
 </style>
@@ -174,13 +200,15 @@
 <div class="sidebar" style="display:none">
   <div class="sidebar-header">
     <img src="logo.png" alt="โลโก้เทศบาลตำบลพระเหลา" class="sidebar-logo">
-    <div class="brand-text"><div class="b1">เทศบาลตำบลพระเหลา</div><div class="b2">ระบบเกษียนหนังสือราชการ</div></div>
+    <div class="brand-text"><div class="b1">เทศบาลตำบลพระเหลา</div><div class="b2">ระบบธุรการกลางสำนักปลัดเทศบาล</div></div>
   </div>
   <nav id="navList">
     <div class="nav-label">เมนูหลัก</div>
     <div class="nav-item active" data-filter="all"><span class="nav-left"><span class="nav-dot"></span> หนังสือทั้งหมด</span></div>
     <div class="nav-item" data-action="new"><span class="nav-left"><span class="nav-dot"></span> สร้างหนังสือใหม่</span></div>
     <div class="nav-item" data-filter="done"><span class="nav-left"><span class="nav-dot"></span> เสร็จสิ้น/พิมพ์ได้</span></div>
+    <div class="nav-item" data-view="sendnum"><span class="nav-left"><span class="nav-dot"></span> ขอเลขหนังสือส่ง</span></div>
+    <div class="nav-item" data-view="ordernum"><span class="nav-left"><span class="nav-dot"></span> ขอเลขคำสั่ง</span></div>
     <!-- เมนูสมัครสมาชิก (ซ่อนไว้เป็นค่าเริ่มต้น ให้เฉพาะแอดมินเห็น) -->
 <a href="#" id="sidebarRegisterBtn" style="display: none;" onclick="openRegisterModal()">
   <i class="fa fa-user-plus"></i> สมัครสมาชิกผู้ใช้งาน
@@ -208,6 +236,9 @@
 
   <div class="workspace">
     <div class="doc-list" id="docList">
+      <div class="search-row">
+        <input type="text" id="docSearchInput" placeholder="🔍 ค้นหาด้วยเลขที่หนังสือ หรือชื่อเรื่อง">
+      </div>
       <div class="filter-row">
         <div class="chip on" data-chip="all">ทั้งหมด</div>
         <div class="chip" data-chip="pending">รอพิจารณา</div>
@@ -217,6 +248,46 @@
       <div id="docCards"></div>
     </div>
     <div class="detail" id="detail"></div>
+  </div>
+
+  <div class="full-view" id="sendNumberView">
+    <div class="fv-inner">
+      <div class="fv-head">
+        <h2>ขอเลขหนังสือส่ง</h2>
+        <button class="btn-primary" id="newSendNumBtn">+ ขอเลขใหม่</button>
+      </div>
+      <div class="fv-hint">เลขทะเบียนส่งจะออกให้อัตโนมัติ เรียงต่อจากเลขล่าสุดเสมอ ไม่มีทางซ้ำหรือหลงเลขกัน</div>
+      <div class="fv-table-wrap">
+        <table class="fv-table">
+          <thead>
+            <tr>
+              <th>เลขทะเบียนส่ง</th><th>ที่</th><th>ลงวันที่</th><th>จาก</th><th>ถึง</th><th>เรื่อง</th><th>การปฏิบัติ</th><th>หมายเหตุ</th><th>ผู้ขอเลข</th>
+            </tr>
+          </thead>
+          <tbody id="sendNumBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="full-view" id="orderNumberView">
+    <div class="fv-inner">
+      <div class="fv-head">
+        <h2>ขอเลขคำสั่ง</h2>
+        <button class="btn-primary" id="newOrderNumBtn">+ ขอเลขใหม่</button>
+      </div>
+      <div class="fv-hint">เลขที่คำสั่งจะออกให้อัตโนมัติ เรียงต่อจากเลขล่าสุดเสมอ ไม่มีทางซ้ำหรือหลงเลขกัน</div>
+      <div class="fv-table-wrap">
+        <table class="fv-table">
+          <thead>
+            <tr>
+              <th>เลขที่คำสั่ง</th><th>ลงวันที่</th><th>เรื่อง</th><th>จาก</th><th>หมายเหตุ</th><th>ผู้ขอเลข</th>
+            </tr>
+          </thead>
+          <tbody id="orderNumBody"></tbody>
+        </table>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -254,8 +325,6 @@
   </div>
 </div>
 
-<!-- หน้าต่างสมัครสมาชิก — เหลือชุดเดียวเท่านั้น (ก่อนหน้านี้มีซ้ำ 3 ชุดในไฟล์ ทำให้ระบบสับสน
-     และเป็นสาเหตุที่คนอื่นสมัครสมาชิกได้ทั้งที่ควรเป็นสิทธิ์ของ piwkung007 เท่านั้น) -->
 <div class="modal-back" id="registerBack">
   <div class="modal">
     <h3>สมัครสมาชิก เจ้าหน้าที่เทศบาล</h3>
@@ -283,9 +352,6 @@
   </div>
 </div>
 
-<!-- [ใหม่] ป๊อปอัพให้กรอกชื่อผู้เกษียนก่อนส่งต่อไปตำแหน่งถัดไป
-     เพราะตอนนี้ทุกคนกดเกษียนได้ทุกขั้นในสาย ไม่ใช่แค่เจ้าของตำแหน่งจริง
-     จึงต้องให้ระบุชื่อผู้เกษียนจริงในขั้นนี้เอง ก่อนบันทึกและส่งต่อ -->
 <div class="modal-back" id="actorNameBack">
   <div class="modal">
     <h3>ยืนยันชื่อผู้เกษียน</h3>
@@ -294,6 +360,39 @@
     <div class="modal-actions">
       <button class="btn-sm" id="actorNameCancel">ยกเลิก</button>
       <button class="btn-sm go" id="actorNameConfirm">ยืนยันและส่งต่อ</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-back" id="sendNumModalBack">
+  <div class="modal">
+    <h3>ขอเลขหนังสือส่ง</h3>
+    <div class="mhint">เลขทะเบียนส่งจะออกให้อัตโนมัติต่อจากเลขล่าสุด ไม่ต้องกรอกเอง</div>
+    <div class="field"><label>ที่</label><input type="text" id="sendAt" placeholder="เช่น อบต.พล 55/2569"></div>
+    <div class="field"><label>ลงวันที่</label><input type="text" id="sendDate" placeholder="เช่น 23 ก.ค. 2569"></div>
+    <div class="field"><label>จาก</label><input type="text" id="sendFrom" placeholder="หน่วยงาน/บุคคลต้นเรื่อง"></div>
+    <div class="field"><label>ถึง</label><input type="text" id="sendTo" placeholder="หน่วยงาน/บุคคลปลายทาง"></div>
+    <div class="field"><label>เรื่อง</label><input type="text" id="sendSubject" placeholder="เรื่อง"></div>
+    <div class="field"><label>การปฏิบัติ</label><input type="text" id="sendAction" placeholder="การปฏิบัติ"></div>
+    <div class="field"><label>หมายเหตุ</label><input type="text" id="sendNote" placeholder="หมายเหตุ (ถ้ามี)"></div>
+    <div class="modal-actions">
+      <button class="btn-sm" id="cancelSendNum">ยกเลิก</button>
+      <button class="btn-sm go" id="submitSendNum">ตกลง</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-back" id="orderNumModalBack">
+  <div class="modal">
+    <h3>ขอเลขคำสั่ง</h3>
+    <div class="mhint">เลขที่คำสั่งจะออกให้อัตโนมัติต่อจากเลขล่าสุด ไม่ต้องกรอกเอง</div>
+    <div class="field"><label>ลงวันที่</label><input type="text" id="orderDate" placeholder="เช่น 23 ก.ค. 2569"></div>
+    <div class="field"><label>เรื่อง</label><input type="text" id="orderSubject" placeholder="เรื่อง"></div>
+    <div class="field"><label>จาก</label><input type="text" id="orderFrom" placeholder="หน่วยงาน/บุคคลต้นเรื่อง"></div>
+    <div class="field"><label>หมายเหตุ</label><input type="text" id="orderNote" placeholder="หมายเหตุ (ถ้ามี)"></div>
+    <div class="modal-actions">
+      <button class="btn-sm" id="cancelOrderNum">ยกเลิก</button>
+      <button class="btn-sm go" id="submitOrderNum">ตกลง</button>
     </div>
   </div>
 </div>
@@ -392,6 +491,7 @@ let selectedIdx = null;
 let currentRole = -1;
 let activeFilter = 'all';
 let navFilter = 'all';
+let searchQuery = '';
 
 function showToast(text, kind){
   const stack = document.getElementById('toastStack');
@@ -430,12 +530,30 @@ function renderRoleSelect(){
   };
 }
 
+function switchView(view){
+  const ws = document.querySelector('.workspace');
+  const sendView = document.getElementById('sendNumberView');
+  const orderView = document.getElementById('orderNumberView');
+  if(ws) ws.style.display = (view==='docs') ? 'flex' : 'none';
+  if(sendView) sendView.classList.toggle('open', view==='sendnum');
+  if(orderView) orderView.classList.toggle('open', view==='ordernum');
+}
+
 document.getElementById('navList').addEventListener('click',(e)=>{
   const item = e.target.closest('.nav-item');
   if(!item) return;
   if(item.dataset.action==='new'){ openModal(); return; }
+  if(item.dataset.view){
+    document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+    item.classList.add('active');
+    switchView(item.dataset.view);
+    if(item.dataset.view==='sendnum') loadSendNumbers();
+    if(item.dataset.view==='ordernum') loadOrderNumbers();
+    return;
+  }
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   item.classList.add('active');
+  switchView('docs');
   navFilter = item.dataset.filter;
   activeFilter='all';
   document.querySelectorAll('.chip').forEach(c=>c.classList.toggle('on', c.dataset.chip==='all'));
@@ -453,6 +571,11 @@ document.querySelectorAll('.chip').forEach(chip=>{
   });
 });
 
+document.getElementById('docSearchInput').addEventListener('input', (e)=>{
+  searchQuery = e.target.value.trim().toLowerCase();
+  renderList();
+});
+
 function visibleDocs(){
   return docs.filter((d)=>{
     const s = statusOf(d);
@@ -460,12 +583,14 @@ function visibleDocs(){
     if(activeFilter==='done' && s!=='done') return false;
     if(activeFilter==='urgent' && s!=='urgent') return false;
     if(navFilter==='done' && s!=='done') return false;
+    if(searchQuery){
+      const hay = ((d.no||'') + ' ' + (d.title||'')).toLowerCase();
+      if(!hay.includes(searchQuery)) return false;
+    }
     return true;
   });
 }
 
-// NOTE: this is the ONLY definition of renderList in the file (a duplicate that
-// had no delete button used to override this one — removed in an earlier fix).
 function renderList(){
   const wrap = document.getElementById('docCards');
   const list = visibleDocs();
@@ -562,8 +687,6 @@ function renderDetail(){
       inner = `<div class="rung-note">${c.note}</div>${fileChips}${sigImg}`;
     } else if(c.state==='active'){
       circleCls='active'; cardCls='active';
-      // [เปลี่ยนตามคำขอใหม่] ทุกคนที่เข้าสู่ระบบแล้ว (ได้รับบัญชีจากแอดมิน) สามารถเกษียนได้ทุกขั้นตอนในสาย
-      // ไม่จำกัดตามลำดับตำแหน่งอีกต่อไป — เงื่อนไขเดียวที่เหลือคือ "ต้องล็อกอินอยู่"
       const canAct = !!loggedUser;
       if(canAct){
         const fileChips = c.files.map((f,fi)=>`<span class="file-chip">📎 ${f.name}<span class="rm" data-rmfile="${fi}">✕</span></span>`).join('');
@@ -614,7 +737,6 @@ function renderDetail(){
     <div class="chain"><div class="chain-line"></div>${rungsHtml}</div>
   `;
 
-  // [เปลี่ยนตามคำขอใหม่] ผูก signature pad / ปุ่มต่างๆ เมื่อ "ล็อกอินอยู่" เท่านั้น ไม่เช็คลำดับตำแหน่งแล้ว
   if(activeIdx!==-1 && loggedUser){
     const pad = document.getElementById('sigPad');
     if(pad) setupSigPad(pad);
@@ -642,7 +764,6 @@ function renderDetail(){
         return;
       }
       const sigData = pad.toDataURL('image/png');
-      // [ใหม่] แทนที่จะส่งไปเลย ให้เปิดป๊อปอัพถามชื่อผู้เกษียนก่อน แล้วค่อยส่งต่อ
       openActorNameModal(d, activeIdx, text, sigData);
     };
     const btnBack = document.getElementById('btnBack');
@@ -653,12 +774,11 @@ function renderDetail(){
   if(printBtn) printBtn.onclick = ()=> printDocument(d);
 }
 
-/* ===== [ใหม่] ป๊อปอัพยืนยันชื่อผู้เกษียน ก่อนบันทึกและส่งต่อ ===== */
+/* ===== ป๊อปอัพยืนยันชื่อผู้เกษียน ก่อนบันทึกและส่งต่อ ===== */
 let pendingForward = null;
 function openActorNameModal(d, idx, text, sigData){
   pendingForward = { d, idx, text, sigData };
   const input = document.getElementById('actorNameInput');
-  // เติมชื่อที่เคยบันทึกไว้ในขั้นนี้ (ถ้ามี) หรือชื่อบัญชีที่ล็อกอินอยู่ เป็นค่าเริ่มต้นให้แก้ไขได้
   input.value = d.chain[idx].name || (loggedUser ? (loggedUser.name || loggedUser.fullName || loggedUser.username || '') : '');
   document.getElementById('actorNameBack').classList.add('open');
   setTimeout(()=>{ input.focus(); input.select(); }, 50);
@@ -699,28 +819,127 @@ function sendBack(d, idx){
 }
 
 /* ===== PRINT ===== */
-function printDocument(d){
-  const blocks = d.chain.map((c,i)=>{
-    const lvl = LEVELS[i];
-    const sig = c.signature ? `<img src="${c.signature}">` : `<span class="p-noline">(ไม่มีลายเซ็น)</span>`;
-    return `<div class="p-block">
-      <div class="role">${lvl.role}</div>
-      <div class="note">${c.note || '-'}</div>
-      <div class="p-sign-row">
-        ${sig}
-        <div class="who">ลงชื่อ .......................................<br>( ${c.name||'-'} )<br>วันที่ ${c.date||'-'}</div>
-      </div>
-    </div>`;
-  }).join('');
+// [ใหม่] รวมไฟล์แนบทั้งหมดในทุกขั้นตอนของสายเกษียน (โดยเฉพาะไฟล์ต้นเรื่อง/สแกนจากขั้นแรก)
+// มาต่อท้ายเป็น "หน้าใหม่" ในเอกสารเดียวกันตอนพิมพ์ — ไม่ได้แก้ของเดิม แค่เพิ่มส่วนนี้ต่อท้าย
+function buildAttachmentsHtml(d){
+    let html = '';
+    const seenFiles = new Set(); // ป้องกันการดึงไฟล์ซ้ำ
+    
+    d.chain.forEach((c)=>{
+        if(!Array.isArray(c.files) || !c.files.length) return;
+        c.files.forEach((f)=>{
+            const name = typeof f === 'string' ? f : (f.name || 'เอกสารแนบ');
+            if (seenFiles.has(name)) return;
+            seenFiles.add(name);
+            
+            const fileSrc = (f.dataUrl) ? f.dataUrl : `/uploads/${name}`;
+            const isPdf = /\.pdf$/i.test(name) || fileSrc.startsWith('data:application/pdf');
+            
+            if(isPdf){
+                // 📄 สร้างกล่องพิเศษไว้รอการคลี่หน้า PDF ทุกหน้าออกมา
+                html += `
+                <div class="p-attach-page pdf-print-container" data-src="${fileSrc}" style="page-break-before: always; width: 100%;">
+                    <div class="p-attach-label" style="font-weight: bold; margin-bottom: 12px; font-size: 14px;">📎 เอกสารแนบ (PDF ทั้งหมด): ${name}</div>
+                    <div class="pdf-pages-area">กำลังดึงเนื้อหาไฟล์ PDF ทุกหน้าเข้าสู่หน้าพิมพ์...</div>
+                </div>`;
+            } else {
+                // 🖼️ สำหรับรูปภาพทั่วไป ให้กางออกหน้าละแผ่นตามปกติ
+                html += `
+                <div class="p-attach-page" style="page-break-before: always; page-break-inside: avoid; text-align: center; width: 100%; margin-top: 20px;">
+                    <div class="p-attach-label" style="font-weight: bold; margin-bottom: 8px; text-align: left;">📎 รูปภาพแนบ: ${name}</div>
+                    <img src="${fileSrc}" style="max-width: 100%; max-height: 260mm; object-fit: contain; display: block; margin: 0 auto;" />
+                </div>`;
+            }
+        });
+    });
+    return html;
+}
 
-  document.getElementById('printArea').innerHTML = `
-    <div class="p-doc">
-      <div class="p-head"><div class="crest">เทศบาลตำบลพระเหลา</div><h2>บันทึกข้อความ — สายการเกษียนหนังสือ</h2></div>
-      <div class="p-meta"><span>${d.no}</span><span>วันที่พิมพ์: ${todayStr()}</span></div>
-      <div class="p-title">เรื่อง: ${d.title}</div>
-      ${blocks}
-    </div>`;
-  window.print();
+async function printDocument(d){
+    // 1. ดึงบล็อกข้อมูลลายเซ็นการเกษียนหนังสือมาประกอบร่างก่อน
+    const blocks = d.chain.map((c,i)=>{
+        const lvl = LEVELS[i];
+        const sig = c.signature ? `<img src="${c.signature}">` : `<span class="p-noline">(ไม่ได้ลงชื่อ)</span>`;
+        return `<div class="p-block">
+            <div class="role">${lvl.role}</div>
+            <div class="note">${c.note || '-'}</div>
+            <div class="p-sign-row">
+                ${sig}
+                <div class="who">ลงชื่อ ...........................................<br>( ${c.name || '-'} )</div>
+            </div>
+        </div>`;
+    }).join('');
+
+    const attachmentsHtml = buildAttachmentsHtml(d);
+
+    // 2. พ่นโครงสร้างหลักและใบเกษียนลงหน้าพิมพ์
+    document.getElementById('printArea').innerHTML = `
+        <div class="p-doc">
+            <div class="p-head"><div class="crest">เทศบาลตำบลพระเหลา</div><h2>บันทึกข้อความ</h2></div>
+            <div class="p-meta"><span>${d.no}</span><span>วันที่พิมพ์: ${todayStr()}</span></div>
+            <div class="p-title">เรื่อง: ${d.title}</div>
+            ${blocks}
+        </div>
+        ${attachmentsHtml}`;
+
+    // 3. เริ่มกระบวนการตามล่าไฟล์ PDF เพื่อคลี่ไส้ในออกมาทีละหน้า
+    const pdfContainers = document.querySelectorAll('.pdf-print-container');
+    if (pdfContainers.length > 0) {
+        // ดึงไลบรารีดักจับ PDF เข้ามารองรับระบบแบบอัตโนมัติ
+        await new Promise((resolve) => {
+            if (window.pdfjsLib) return resolve();
+            const script = document.createElement('script');
+            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js';
+            script.onload = () => {
+                window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+                resolve();
+            };
+            document.head.appendChild(script);
+        });
+
+        // ลูปเจาะไฟล์ PDF เพื่อแปลงออกมาเป็นแผ่นกระดาษพิมพ์ทีละหน้า
+        for (const container of pdfContainers) {
+            const url = container.getAttribute('data-src');
+            const pagesArea = container.querySelector('.pdf-pages-area');
+            pagesArea.innerHTML = ''; // ล้างข้อความกำลังโหลดออก
+            
+            try {
+                const loadingTask = pdfjsLib.getDocument(url);
+                const pdf = await loadingTask.promise;
+                
+                // วนลูปตามจำนวนหน้าจริงของ PDF (ต่อให้มี 10 หน้า ก็จะทำครบทั้ง 10 หน้า)
+                for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+                    const page = await pdf.getPage(pageNum);
+                    const viewport = page.getViewport({ scale: 2.0 }); // scale 2.0 เพื่อความคมชัดสูงเวลาพิมพ์ออกกระดาษ
+                    
+                    const canvas = document.createElement('canvas');
+                    const context = canvas.getContext('2d');
+                    canvas.height = viewport.height;
+                    canvas.width = viewport.width;
+                    canvas.style.width = '100%';
+                    canvas.style.height = 'auto';
+                    canvas.style.display = 'block';
+                    canvas.style.marginBottom = '20px';
+                    
+                    // สั่งให้หน้า 2 เป็นต้นไป ทำการตัดหน้าใหม่ (Page Break) ทุกหน้าอย่างเด็ดขาด
+                    if (pageNum > 1) {
+                        canvas.style.pageBreakBefore = 'always';
+                    }
+                    
+                    await page.render({ canvasContext: context, viewport: viewport }).promise;
+                    pagesArea.appendChild(canvas);
+                }
+            } catch (err) {
+                console.error(err);
+                pagesArea.innerHTML = `<div style="color:red; padding:10px;">ไม่สามารถดึงเนื้อหา PDF ได้: ${err.message}</div>`;
+            }
+        }
+    }
+
+    // 4. เมื่อทุกอย่างโหลดกางแผ่ออกมาครบถ้วนสมบูรณ์แล้ว ค่อยสั่งเปิดหน้าต่างพิมพ์รายงาน
+    setTimeout(() => {
+        window.print();
+    }, 600);
 }
 
 /* ===== NEW DOC MODAL ===== */
@@ -870,12 +1089,123 @@ document.getElementById('submitNew').onclick = async ()=>{
   else { showToast('ไม่สามารถสร้างหนังสือได้ (ต้องเข้าสู่ระบบ)' + (resp && resp.error ? ': '+resp.error : ''), 'error'); }
 };
 
+/* ==========================================
+   ระบบ "ขอเลขหนังสือส่ง"
+   ========================================== */
+let sendNumbers = [];
+async function loadSendNumbers(){
+  const res = await apiJSON('GET','/api/sendnumbers');
+  sendNumbers = Array.isArray(res) ? res : [];
+  renderSendNumbers();
+}
+function renderSendNumbers(){
+  const body = document.getElementById('sendNumBody');
+  if(!body) return;
+  if(sendNumbers.length===0){
+    body.innerHTML = `<tr><td colspan="9" class="fv-empty">ยังไม่มีการขอเลขหนังสือส่ง — กด "+ ขอเลขใหม่" เพื่อเริ่มต้น</td></tr>`;
+    return;
+  }
+  const sorted = [...sendNumbers].sort((a,b)=> (b.num||0) - (a.num||0));
+  body.innerHTML = sorted.map(r=>`
+    <tr>
+      <td><span class="fv-num-badge">${r.num}</span></td>
+      <td>${r.at||'-'}</td>
+      <td>${r.date||'-'}</td>
+      <td>${r.from||'-'}</td>
+      <td>${r.to||'-'}</td>
+      <td>${r.subject||'-'}</td>
+      <td>${r.action||'-'}</td>
+      <td>${r.note||'-'}</td>
+      <td>${r.requestedBy||'-'}</td>
+    </tr>`).join('');
+}
+document.getElementById('newSendNumBtn').onclick = ()=>{
+  document.getElementById('sendNumModalBack').classList.add('open');
+};
+document.getElementById('cancelSendNum').onclick = ()=>{
+  document.getElementById('sendNumModalBack').classList.remove('open');
+};
+document.getElementById('sendNumModalBack').addEventListener('click',(e)=>{ if(e.target.id==='sendNumModalBack') document.getElementById('sendNumModalBack').classList.remove('open'); });
+document.getElementById('submitSendNum').onclick = async ()=>{
+  const payload = {
+    at: document.getElementById('sendAt').value.trim(),
+    date: document.getElementById('sendDate').value.trim(),
+    from: document.getElementById('sendFrom').value.trim(),
+    to: document.getElementById('sendTo').value.trim(),
+    subject: document.getElementById('sendSubject').value.trim(),
+    action: document.getElementById('sendAction').value.trim(),
+    note: document.getElementById('sendNote').value.trim(),
+  };
+  if(!payload.subject){ showToast('กรุณาระบุเรื่อง','error'); return; }
+  const res = await apiJSON('POST','/api/sendnumbers', payload);
+  if(res && res.num){
+    showToast(`✅ ออกเลขทะเบียนส่งที่ ${res.num} เรียบร้อย`, 'success');
+    document.getElementById('sendNumModalBack').classList.remove('open');
+    ['sendAt','sendDate','sendFrom','sendTo','sendSubject','sendAction','sendNote'].forEach(id=>{ document.getElementById(id).value=''; });
+    await loadSendNumbers();
+  } else {
+    showToast('ไม่สามารถขอเลขได้' + (res && res.error ? ': '+res.error : ''), 'error');
+  }
+};
+
+/* ==========================================
+   ระบบ "ขอเลขคำสั่ง"
+   ========================================== */
+let orderNumbers = [];
+async function loadOrderNumbers(){
+  const res = await apiJSON('GET','/api/ordernumbers');
+  orderNumbers = Array.isArray(res) ? res : [];
+  renderOrderNumbers();
+}
+function renderOrderNumbers(){
+  const body = document.getElementById('orderNumBody');
+  if(!body) return;
+  if(orderNumbers.length===0){
+    body.innerHTML = `<tr><td colspan="6" class="fv-empty">ยังไม่มีการขอเลขคำสั่ง — กด "+ ขอเลขใหม่" เพื่อเริ่มต้น</td></tr>`;
+    return;
+  }
+  const sorted = [...orderNumbers].sort((a,b)=> (b.num||0) - (a.num||0));
+  body.innerHTML = sorted.map(r=>`
+    <tr>
+      <td><span class="fv-num-badge">${r.num}</span></td>
+      <td>${r.date||'-'}</td>
+      <td>${r.subject||'-'}</td>
+      <td>${r.from||'-'}</td>
+      <td>${r.note||'-'}</td>
+      <td>${r.requestedBy||'-'}</td>
+    </tr>`).join('');
+}
+document.getElementById('newOrderNumBtn').onclick = ()=>{
+  document.getElementById('orderNumModalBack').classList.add('open');
+};
+document.getElementById('cancelOrderNum').onclick = ()=>{
+  document.getElementById('orderNumModalBack').classList.remove('open');
+};
+document.getElementById('orderNumModalBack').addEventListener('click',(e)=>{ if(e.target.id==='orderNumModalBack') document.getElementById('orderNumModalBack').classList.remove('open'); });
+document.getElementById('submitOrderNum').onclick = async ()=>{
+  const payload = {
+    date: document.getElementById('orderDate').value.trim(),
+    subject: document.getElementById('orderSubject').value.trim(),
+    from: document.getElementById('orderFrom').value.trim(),
+    note: document.getElementById('orderNote').value.trim(),
+  };
+  if(!payload.subject){ showToast('กรุณาระบุเรื่อง','error'); return; }
+  const res = await apiJSON('POST','/api/ordernumbers', payload);
+  if(res && res.num){
+    showToast(`✅ ออกเลขที่คำสั่ง ${res.num} เรียบร้อย`, 'success');
+    document.getElementById('orderNumModalBack').classList.remove('open');
+    ['orderDate','orderSubject','orderFrom','orderNote'].forEach(id=>{ document.getElementById(id).value=''; });
+    await loadOrderNumbers();
+  } else {
+    showToast('ไม่สามารถขอเลขได้' + (res && res.error ? ': '+res.error : ''), 'error');
+  }
+};
+
 // initial load: check auth and fetch docs
 loadMe();
 loadDocsFromServer();
 </script>
 <script>
-  // เช็กสิทธิ์: ให้เฉพาะ piwkung007 เท่านั้นที่เห็นเมนู "สมัครสมาชิกผู้ใช้งาน" ใน Sidebar
   fetch('/api/me')
     .then(res => res.json())
     .then(data => {
@@ -888,7 +1218,6 @@ loadDocsFromServer();
       }
     });
 
-  // เปิด/ปิดหน้าต่างสมัครสมาชิก — ใช้ modal เดียวกับ modal อื่นๆ ในระบบ (คลาส .open)
   function openRegisterModal() {
     const regBack = document.getElementById('registerBack');
     if (regBack) regBack.classList.add('open');

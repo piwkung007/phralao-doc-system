@@ -8,13 +8,35 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// [FIX] เดิม express.json()/express.urlencoded() ไม่ได้กำหนด limit ไว้ ทำให้ใช้ค่า
+// default ของ Express ซึ่งคือแค่ "100kb" ต่อคำขอหนึ่งครั้ง — ไฟล์แนบ (รูป/PDF) ที่แปลงเป็น
+// base64 ฝั่งหน้าเว็บ แทบทุกไฟล์มีขนาดเกิน 100kb อยู่แล้วตั้งแต่ไฟล์เดียว จึงถูกเซิร์ฟเวอร์
+// ปฏิเสธคำขอทันทีทุกครั้งที่มีการแนบไฟล์ (ทั้งตอนสร้างหนังสือใหม่ และตอนแนบไฟล์ระหว่างเกษียน)
+// นี่คือสาเหตุจริงของ "ไม่สามารถสร้างหนังสือได้" และ "แนบไฟล์ไม่ได้เลย" — ไม่ใช่เรื่องสิทธิ์
+// จึงขยาย limit ให้รองรับไฟล์แนบขนาดใหญ่ขึ้น (รวมทุกไฟล์ในคำขอเดียวไม่เกิน 50MB)
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+// [FIX] เมื่อคำขอมีขนาดเกิน limit (หรือ JSON ผิดรูปแบบ) เดิม Express จะตอบกลับเป็นหน้า
+// error ที่ไม่ใช่ JSON ทำให้ฝั่งหน้าเว็บ parse ไม่ออกและขึ้นข้อความกลางๆ ที่ไม่บอกสาเหตุจริง
+// เพิ่ม middleware นี้เพื่อให้ตอบกลับเป็น JSON ที่มีข้อความชัดเจน ผู้ใช้จะได้เห็นสาเหตุจริง
+app.use((err, req, res, next) => {
+  if (err && err.type === 'entity.too.large') {
+    return res.status(413).json({ error: 'ไฟล์แนบมีขนาดใหญ่เกินไป กรุณาแนบไฟล์ที่มีขนาดเล็กลง (รวมทุกไฟล์ไม่เกิน 50MB ต่อครั้ง)' });
+  }
+  if (err && err.type === 'entity.parse.failed') {
+    return res.status(400).json({ error: 'ข้อมูลที่ส่งมาไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง' });
+  }
+  next(err);
+});
 
 const DATA_DIR = path.join(__dirname, 'data');
 const DATA_FILE = path.join(DATA_DIR, 'docs.json');
 const USERS_FILE = path.join(DATA_DIR, 'users.json');
 const SESSIONS_FILE = path.join(DATA_DIR, 'sessions.json');
+// ไฟล์เก็บข้อมูล 2 ระบบใหม่: ขอเลขหนังสือส่ง / ขอเลขคำสั่ง
+const SEND_NUM_FILE = path.join(DATA_DIR, 'send_numbers.json');
+const ORDER_NUM_FILE = path.join(DATA_DIR, 'order_numbers.json');
 
 function ensureDataDir(){
   if(!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -64,6 +86,34 @@ function saveDocs(docs){
   }
 }
 
+// ตัวช่วยจัดการไฟล์สำหรับ "ขอเลขหนังสือส่ง"
+function ensureSendNumFile(){
+  if(!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+  if(!fs.existsSync(SEND_NUM_FILE)) fs.writeFileSync(SEND_NUM_FILE, '[]', 'utf8');
+}
+function loadSendNumbers(){
+  try{ ensureSendNumFile(); return JSON.parse(fs.readFileSync(SEND_NUM_FILE,'utf8')||'[]'); }
+  catch(e){ console.error('send numbers load failed', e); return []; }
+}
+function saveSendNumbers(list){
+  try{ ensureSendNumFile(); fs.writeFileSync(SEND_NUM_FILE, JSON.stringify(list,null,2), 'utf8'); return true; }
+  catch(e){ console.error('send numbers save failed', e); return false; }
+}
+
+// ตัวช่วยจัดการไฟล์สำหรับ "ขอเลขคำสั่ง"
+function ensureOrderNumFile(){
+  if(!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+  if(!fs.existsSync(ORDER_NUM_FILE)) fs.writeFileSync(ORDER_NUM_FILE, '[]', 'utf8');
+}
+function loadOrderNumbers(){
+  try{ ensureOrderNumFile(); return JSON.parse(fs.readFileSync(ORDER_NUM_FILE,'utf8')||'[]'); }
+  catch(e){ console.error('order numbers load failed', e); return []; }
+}
+function saveOrderNumbers(list){
+  try{ ensureOrderNumFile(); fs.writeFileSync(ORDER_NUM_FILE, JSON.stringify(list,null,2), 'utf8'); return true; }
+  catch(e){ console.error('order numbers save failed', e); return false; }
+}
+
 function ensureSeedUsers(){
   const users = loadUsers();
   const existing = users.find(u => u.username === 'piwkung007');
@@ -93,9 +143,8 @@ function isSuperAdminUser(user){
   return Boolean(user && (user.isSuperAdmin || user.username === 'piwkung007' || user.roleIndex === -1));
 }
 
-// [เปลี่ยนตามคำขอใหม่] เดิมจำกัดว่า roleIndex ของบัญชีต้อง >= ขั้นที่จะดำเนินการ (ตำแหน่งสูงกว่าเท่านั้นทำแทนได้)
-// ตอนนี้เปลี่ยนนโยบายเป็น: ผู้ใช้ที่ล็อกอินอยู่ (ได้รับบัญชีจากแอดมิน) ไม่ว่าตำแหน่งใด
-// สามารถเกษียน/ตีกลับได้ทุกขั้นตอนในสาย ไม่จำกัดลำดับตำแหน่งอีกต่อไป
+// ผู้ใช้ที่ล็อกอินอยู่ (ได้รับบัญชีจากแอดมิน) ไม่ว่าตำแหน่งใด
+// สามารถเกษียน/ตีกลับได้ทุกขั้นตอนในสาย ไม่จำกัดลำดับตำแหน่ง
 function canActOnStep(user, stepIdx){
   return Boolean(user);
 }
@@ -278,10 +327,10 @@ app.post('/api/docs/:id/forward', (req, res) => {
 
   const i = idx;
   if(!doc.chain[i]) return res.status(400).json({ error: 'invalid idx' });
-  // [เปลี่ยนตามคำขอใหม่] ใครก็ตามที่ล็อกอินอยู่ ทำขั้นตอนไหนก็ได้ (ดู canActOnStep ด้านบน)
+  // ใครก็ตามที่ล็อกอินอยู่ ทำขั้นตอนไหนก็ได้ (ดู canActOnStep ด้านบน)
   if(!canActOnStep(user, i)){ return res.status(403).json({ error: 'forbidden' }); }
 
-  // [ใหม่] บันทึกชื่อผู้เกษียนจากช่องที่กรอกในป๊อปอัพฝั่งหน้าเว็บ (actorName)
+  // บันทึกชื่อผู้เกษียนจากช่องที่กรอกในป๊อปอัพฝั่งหน้าเว็บ (actorName)
   // เพราะตอนนี้ใครก็เกษียนขั้นไหนก็ได้ ชื่อที่ขึ้นในเอกสารจึงต้องระบุเองว่าใครเป็นผู้เกษียนจริง
   // ถ้าไม่ได้ส่ง actorName มา (เช่น เรียก API ตรงๆ) จะ fallback ไปใช้ชื่อบัญชีที่ล็อกอินแทน
   const trimmedActorName = (typeof actorName === 'string') ? actorName.trim() : '';
@@ -312,7 +361,7 @@ app.post('/api/docs/:id/back', (req, res) => {
   if(!doc) return res.status(404).json({ error: 'not found' });
   const i = idx;
   if(!doc.chain[i] || i-1 < 0) return res.status(400).json({ error: 'invalid idx' });
-  // [เปลี่ยนตามคำขอใหม่] ใครก็ตามที่ล็อกอินอยู่ ตีกลับขั้นตอนไหนก็ได้เช่นกัน
+  // ใครก็ตามที่ล็อกอินอยู่ ตีกลับขั้นตอนไหนก็ได้เช่นกัน
   if(!canActOnStep(user, i)){ return res.status(403).json({ error: 'forbidden' }); }
 
   doc.chain[i].state = 'wait';
@@ -350,6 +399,69 @@ app.delete('/api/docs/:id', (req, res) => {
   const [removed] = docs.splice(idx, 1);
   saveDocs(docs);
   res.json({ ok: true, id: removed.id });
+});
+
+// ==========================================
+// API: ขอเลขหนังสือส่ง — ออกเลขทะเบียนอัตโนมัติ เรียงต่อกันไม่ให้หลงเลข
+// ==========================================
+app.get('/api/sendnumbers', (req, res) => {
+  const list = loadSendNumbers();
+  res.json(list);
+});
+app.post('/api/sendnumbers', (req, res) => {
+  const s = getSessionFromReq(req);
+  if(!s) return res.status(401).json({ error: 'unauthenticated' });
+  const users = loadUsers(); const user = users.find(u => u.id === s.userId);
+  const { at, date, from, to, subject, action, note } = req.body || {};
+  if(!subject) return res.status(400).json({ error: 'กรุณาระบุเรื่อง' });
+
+  const list = loadSendNumbers();
+  const nextNum = list.reduce((m, r) => Math.max(m, Number(r.num) || 0), 0) + 1;
+  const record = {
+    num: nextNum,
+    at: at || '',
+    date: date || '',
+    from: from || '',
+    to: to || '',
+    subject: subject || '',
+    action: action || '',
+    note: note || '',
+    requestedBy: user ? (user.fullName || user.name || user.username) : '',
+    createdAt: Date.now()
+  };
+  list.push(record);
+  saveSendNumbers(list);
+  res.json(record);
+});
+
+// ==========================================
+// API: ขอเลขคำสั่ง — ออกเลขที่คำสั่งอัตโนมัติ เรียงต่อกันไม่ให้หลงเลข
+// ==========================================
+app.get('/api/ordernumbers', (req, res) => {
+  const list = loadOrderNumbers();
+  res.json(list);
+});
+app.post('/api/ordernumbers', (req, res) => {
+  const s = getSessionFromReq(req);
+  if(!s) return res.status(401).json({ error: 'unauthenticated' });
+  const users = loadUsers(); const user = users.find(u => u.id === s.userId);
+  const { date, subject, from, note } = req.body || {};
+  if(!subject) return res.status(400).json({ error: 'กรุณาระบุเรื่อง' });
+
+  const list = loadOrderNumbers();
+  const nextNum = list.reduce((m, r) => Math.max(m, Number(r.num) || 0), 0) + 1;
+  const record = {
+    num: nextNum,
+    date: date || '',
+    subject: subject || '',
+    from: from || '',
+    note: note || '',
+    requestedBy: user ? (user.fullName || user.name || user.username) : '',
+    createdAt: Date.now()
+  };
+  list.push(record);
+  saveOrderNumbers(list);
+  res.json(record);
 });
 
 app.use((req, res) => {
