@@ -8,7 +8,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(cors());
-// [FIX] เดิม express.json()/express.urlencoded() ไม่ได้กำหนด limit ไว้ ทำให้ใช้ค่า
+// เดิม express.json()/express.urlencoded() ไม่ได้กำหนด limit ไว้ ทำให้ใช้ค่า
 // default ของ Express ซึ่งคือแค่ "100kb" ต่อคำขอหนึ่งครั้ง — ไฟล์แนบ (รูป/PDF) ที่แปลงเป็น
 // base64 ฝั่งหน้าเว็บ แทบทุกไฟล์มีขนาดเกิน 100kb อยู่แล้วตั้งแต่ไฟล์เดียว จึงถูกเซิร์ฟเวอร์
 // ปฏิเสธคำขอทันทีทุกครั้งที่มีการแนบไฟล์ (ทั้งตอนสร้างหนังสือใหม่ และตอนแนบไฟล์ระหว่างเกษียน)
@@ -17,7 +17,7 @@ app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// [FIX] เมื่อคำขอมีขนาดเกิน limit (หรือ JSON ผิดรูปแบบ) เดิม Express จะตอบกลับเป็นหน้า
+// เมื่อคำขอมีขนาดเกิน limit (หรือ JSON ผิดรูปแบบ) เดิม Express จะตอบกลับเป็นหน้า
 // error ที่ไม่ใช่ JSON ทำให้ฝั่งหน้าเว็บ parse ไม่ออกและขึ้นข้อความกลางๆ ที่ไม่บอกสาเหตุจริง
 // เพิ่ม middleware นี้เพื่อให้ตอบกลับเป็น JSON ที่มีข้อความชัดเจน ผู้ใช้จะได้เห็นสาเหตุจริง
 app.use((err, req, res, next) => {
@@ -37,6 +37,8 @@ const SESSIONS_FILE = path.join(DATA_DIR, 'sessions.json');
 // ไฟล์เก็บข้อมูล 2 ระบบใหม่: ขอเลขหนังสือส่ง / ขอเลขคำสั่ง
 const SEND_NUM_FILE = path.join(DATA_DIR, 'send_numbers.json');
 const ORDER_NUM_FILE = path.join(DATA_DIR, 'order_numbers.json');
+// [ใหม่] ไฟล์เก็บข้อมูลระบบ "ลงรับหนังสือ" (ก่อนเข้าสู่สายเกษียน)
+const INTAKE_FILE = path.join(DATA_DIR, 'intakes.json');
 
 function ensureDataDir(){
   if(!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -112,6 +114,20 @@ function loadOrderNumbers(){
 function saveOrderNumbers(list){
   try{ ensureOrderNumFile(); fs.writeFileSync(ORDER_NUM_FILE, JSON.stringify(list,null,2), 'utf8'); return true; }
   catch(e){ console.error('order numbers save failed', e); return false; }
+}
+
+// [ใหม่] ตัวช่วยจัดการไฟล์สำหรับ "ลงรับหนังสือ" (ก่อนเข้าสู่สายเกษียน)
+function ensureIntakeFile(){
+  if(!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+  if(!fs.existsSync(INTAKE_FILE)) fs.writeFileSync(INTAKE_FILE, '[]', 'utf8');
+}
+function loadIntakes(){
+  try{ ensureIntakeFile(); return JSON.parse(fs.readFileSync(INTAKE_FILE,'utf8')||'[]'); }
+  catch(e){ console.error('intakes load failed', e); return []; }
+}
+function saveIntakes(list){
+  try{ ensureIntakeFile(); fs.writeFileSync(INTAKE_FILE, JSON.stringify(list,null,2), 'utf8'); return true; }
+  catch(e){ console.error('intakes save failed', e); return false; }
 }
 
 function ensureSeedUsers(){
@@ -462,6 +478,90 @@ app.post('/api/ordernumbers', (req, res) => {
   list.push(record);
   saveOrderNumbers(list);
   res.json(record);
+});
+
+// ==========================================
+// [ใหม่] API: ลงรับหนังสือ (ก่อนเข้าสู่สายเกษียน)
+// ==========================================
+
+// รายการลงรับหนังสือทั้งหมด (ทั้งที่ยังรอรับ และรับไปแล้ว)
+app.get('/api/intakes', (req, res) => {
+  const list = loadIntakes();
+  res.json(list);
+});
+
+// ลงรับหนังสือใหม่ — ออกเลขที่รับอัตโนมัติ เรียงต่อกันไม่ให้หลงเลข
+app.post('/api/intakes', (req, res) => {
+  const s = getSessionFromReq(req);
+  if(!s) return res.status(401).json({ error: 'unauthenticated' });
+  const users = loadUsers(); const user = users.find(u => u.id === s.userId);
+  const { at, date, from, to, subject, action, department, section } = req.body || {};
+  if(!subject) return res.status(400).json({ error: 'กรุณาระบุเรื่อง' });
+  if(!department) return res.status(400).json({ error: 'กรุณาเลือกกองที่ได้รับมอบหมาย' });
+
+  const list = loadIntakes();
+  const nextNum = list.reduce((m, r) => Math.max(m, Number(r.receiveNo) || 0), 0) + 1;
+  const record = {
+    id: String(Date.now()) + '-' + Math.random().toString(36).slice(2, 7),
+    receiveNo: nextNum,
+    at: at || '',
+    date: date || '',
+    from: from || '',
+    to: to || '',
+    subject: subject || '',
+    action: action || '',
+    department: department,
+    section: department === 'สำนักปลัด' ? (section || '') : '',
+    status: 'pending',
+    claimedBy: '',
+    claimedAt: null,
+    linkedDocId: null,
+    registeredBy: user ? (user.fullName || user.name || user.username) : '',
+    createdAt: Date.now()
+  };
+  list.push(record);
+  saveIntakes(list);
+  res.json(record);
+});
+
+// กดรับเรื่อง — แปลงรายการที่ลงรับไว้ ให้กลายเป็นหนังสือจริงเข้าสู่สายเกษียนตามปกติ
+// (สร้างหนังสือด้วยโครงสร้างเดียวกับ /api/docs แยกเป็นโค้ดของตัวเอง เพื่อไม่ต้องแก้ route เดิม)
+app.post('/api/intakes/:id/claim', (req, res) => {
+  const s = getSessionFromReq(req);
+  if(!s) return res.status(401).json({ error: 'unauthenticated' });
+  const users = loadUsers(); const user = users.find(u => u.id === s.userId);
+
+  const list = loadIntakes();
+  const intake = list.find(r => r.id === req.params.id);
+  if(!intake) return res.status(404).json({ error: 'not found' });
+  if(intake.status === 'claimed') return res.status(409).json({ error: 'รายการนี้ถูกรับไปแล้ว' });
+
+  const docs = loadDocs();
+  const seq = docs.reduce((m, d) => Math.max(m, d.seq || 0), 0) + 1;
+  const beYear = new Date().getFullYear() + 543;
+  const docNo = `ที่ อบต.พล ${seq}/${beYear}`;
+
+  const LEVELS_COUNT = 7;
+  const chain = Array.from({ length: LEVELS_COUNT }).map((_, i) => ({
+    name: i === 0 ? (user ? (user.fullName || user.name || user.username) : '') : '',
+    date: '',
+    note: i === 0 ? `รับเรื่องจากการลงรับหนังสือ เลขที่รับ ${intake.receiveNo} (${intake.department}${intake.section ? ' - ' + intake.section : ''})` : '',
+    state: 'active',
+    files: [],
+    signature: null
+  }));
+
+  const doc = { id: String(Date.now()), seq, no: docNo, title: intake.subject, urgent: false, chain, intakeId: intake.id };
+  docs.unshift(doc);
+  saveDocs(docs);
+
+  intake.status = 'claimed';
+  intake.claimedBy = user ? (user.fullName || user.name || user.username) : '';
+  intake.claimedAt = Date.now();
+  intake.linkedDocId = doc.id;
+  saveIntakes(list);
+
+  res.json({ intake, doc });
 });
 
 app.use((req, res) => {

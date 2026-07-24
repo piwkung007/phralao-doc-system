@@ -146,11 +146,16 @@
   .p-sign-row .who{font-size:12px;text-align:right;line-height:1.5;}
   .p-noline{font-size:12px;color:#999;font-style:italic;}
 
-  /* [ใหม่] หน้าไฟล์แนบ (ต้นเรื่อง/สแกน) ที่พิมพ์ต่อท้ายในไฟล์เดียวกัน — ขึ้นหน้าใหม่ทุกไฟล์ */
+  /* หน้าไฟล์แนบ (ต้นเรื่อง/สแกน) ที่พิมพ์ต่อท้ายในไฟล์เดียวกัน — ขึ้นหน้าใหม่ทุกไฟล์ */
   .p-attach-page{page-break-before:always; padding-top:14px;}
   .p-attach-label{font-size:12.5px;font-weight:700;color:#333;margin-bottom:10px;}
   .p-attach-img{max-width:100%;display:block;}
   .p-attach-pdf{width:100%;height:95vh;border:none;}
+
+  /* [ใหม่] ตารางพิมพ์รายการขอเลขหนังสือส่ง / ขอเลขคำสั่ง */
+  .p-list-table{width:100%;border-collapse:collapse;font-size:12.5px;}
+  .p-list-table th, .p-list-table td{border:1px solid #333;padding:6px 8px;text-align:left;vertical-align:top;}
+  .p-list-table th{background:#eee;font-weight:700;}
 
   @media print{
     body *{visibility:hidden;}
@@ -163,12 +168,13 @@
   .search-row input{width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:20px;font-family:inherit;font-size:13px;background:#fff;}
   .search-row input:focus{outline:none;border-color:var(--gold);}
 
-  /* ===== หน้าจอเต็มสำหรับ "ขอเลขหนังสือส่ง" / "ขอเลขคำสั่ง" ===== */
+  /* ===== หน้าจอเต็มสำหรับ "ขอเลขหนังสือส่ง" / "ขอเลขคำสั่ง" / "หนังสือรอเกษียน" ===== */
   .full-view{flex:1;display:none;overflow-y:auto;padding:26px 34px;flex-direction:column;}
   .full-view.open{display:flex;}
   .fv-inner{max-width:100%;}
   .fv-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:10px;}
   .fv-head h2{font-size:19px;color:var(--navy);}
+  .fv-head-actions{display:flex;gap:10px;flex-wrap:wrap;}
   .fv-hint{font-size:12.5px;color:var(--ink-soft);margin-bottom:16px;}
   .fv-table-wrap{overflow-x:auto;background:#fff;border:1px solid var(--line);border-radius:var(--radius);}
   .fv-table{width:100%;border-collapse:collapse;font-size:13px;}
@@ -177,6 +183,23 @@
   .fv-table tr:last-child td{border-bottom:none;}
   .fv-empty{text-align:center;color:var(--ink-soft);padding:30px;}
   .fv-num-badge{display:inline-block;background:var(--navy);color:#fff;font-weight:700;padding:2px 10px;border-radius:20px;font-size:12.5px;}
+  .fv-row-actions{display:flex;gap:8px;white-space:nowrap;}
+  .fv-icon-btn{cursor:pointer;font-size:14px;padding:2px 4px;border-radius:4px;}
+  .fv-icon-btn:hover{background:var(--cream);}
+
+  /* ===== ระบบ "ลงรับหนังสือ / หนังสือรอเกษียน" ===== */
+  .intake-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:14px;margin-top:6px;}
+  .intake-cat-btn{position:relative;background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:26px 16px;text-align:center;cursor:pointer;font-weight:700;color:var(--navy);font-size:14.5px;transition:box-shadow .15s, border-color .15s;}
+  .intake-cat-btn:hover{box-shadow:0 4px 16px rgba(11,42,74,0.1);border-color:var(--gold);}
+  .intake-cat-badge{position:absolute;top:-9px;right:-9px;background:var(--red);color:#fff;font-size:12px;font-weight:700;min-width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;padding:0 4px;box-shadow:0 2px 6px rgba(0,0,0,0.15);}
+  .intake-list-wrap{margin-top:24px;}
+  .intake-list-head{display:flex;align-items:center;gap:14px;margin-bottom:14px;}
+  .intake-list-head h3{font-size:15px;color:var(--navy);}
+  .intake-item-card{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;margin-bottom:12px;}
+  .intake-item-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;gap:10px;flex-wrap:wrap;}
+  .intake-item-title{font-weight:600;margin-bottom:6px;}
+  .intake-item-meta{font-size:12.5px;color:var(--ink-soft);line-height:1.8;}
+  .intake-item-meta b{color:var(--ink);}
 
   ::-webkit-scrollbar{width:8px;} ::-webkit-scrollbar-thumb{background:#D6D0C2;border-radius:8px;}
 </style>
@@ -209,6 +232,7 @@
     <div class="nav-item" data-filter="done"><span class="nav-left"><span class="nav-dot"></span> เสร็จสิ้น/พิมพ์ได้</span></div>
     <div class="nav-item" data-view="sendnum"><span class="nav-left"><span class="nav-dot"></span> ขอเลขหนังสือส่ง</span></div>
     <div class="nav-item" data-view="ordernum"><span class="nav-left"><span class="nav-dot"></span> ขอเลขคำสั่ง</span></div>
+    <div class="nav-item" data-view="intake"><span class="nav-left"><span class="nav-dot"></span> หนังสือรอเกษียน</span></div>
     <!-- เมนูสมัครสมาชิก (ซ่อนไว้เป็นค่าเริ่มต้น ให้เฉพาะแอดมินเห็น) -->
 <a href="#" id="sidebarRegisterBtn" style="display: none;" onclick="openRegisterModal()">
   <i class="fa fa-user-plus"></i> สมัครสมาชิกผู้ใช้งาน
@@ -254,14 +278,17 @@
     <div class="fv-inner">
       <div class="fv-head">
         <h2>ขอเลขหนังสือส่ง</h2>
-        <button class="btn-primary" id="newSendNumBtn">+ ขอเลขใหม่</button>
+        <div class="fv-head-actions">
+          <button class="btn-sm" id="printSendNumBtn">🖨️ พิมพ์ตารางทั้งหมด</button>
+          <button class="btn-primary" id="newSendNumBtn">+ ขอเลขใหม่</button>
+        </div>
       </div>
       <div class="fv-hint">เลขทะเบียนส่งจะออกให้อัตโนมัติ เรียงต่อจากเลขล่าสุดเสมอ ไม่มีทางซ้ำหรือหลงเลขกัน</div>
       <div class="fv-table-wrap">
         <table class="fv-table">
           <thead>
             <tr>
-              <th>เลขทะเบียนส่ง</th><th>ที่</th><th>ลงวันที่</th><th>จาก</th><th>ถึง</th><th>เรื่อง</th><th>การปฏิบัติ</th><th>หมายเหตุ</th><th>ผู้ขอเลข</th>
+              <th>เลขทะเบียนส่ง</th><th>ที่</th><th>ลงวันที่</th><th>จาก</th><th>ถึง</th><th>เรื่อง</th><th>การปฏิบัติ</th><th>หมายเหตุ</th><th>ผู้ขอเลข</th><th>จัดการ</th>
             </tr>
           </thead>
           <tbody id="sendNumBody"></tbody>
@@ -274,18 +301,40 @@
     <div class="fv-inner">
       <div class="fv-head">
         <h2>ขอเลขคำสั่ง</h2>
-        <button class="btn-primary" id="newOrderNumBtn">+ ขอเลขใหม่</button>
+        <div class="fv-head-actions">
+          <button class="btn-sm" id="printOrderNumBtn">🖨️ พิมพ์ตารางทั้งหมด</button>
+          <button class="btn-primary" id="newOrderNumBtn">+ ขอเลขใหม่</button>
+        </div>
       </div>
       <div class="fv-hint">เลขที่คำสั่งจะออกให้อัตโนมัติ เรียงต่อจากเลขล่าสุดเสมอ ไม่มีทางซ้ำหรือหลงเลขกัน</div>
       <div class="fv-table-wrap">
         <table class="fv-table">
           <thead>
             <tr>
-              <th>เลขที่คำสั่ง</th><th>ลงวันที่</th><th>เรื่อง</th><th>จาก</th><th>หมายเหตุ</th><th>ผู้ขอเลข</th>
+              <th>เลขที่คำสั่ง</th><th>ลงวันที่</th><th>เรื่อง</th><th>จาก</th><th>หมายเหตุ</th><th>ผู้ขอเลข</th><th>จัดการ</th>
             </tr>
           </thead>
           <tbody id="orderNumBody"></tbody>
         </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- หน้าจอ "หนังสือรอเกษียน" — ลงรับก่อน แล้วผู้รับผิดชอบแต่ละกองกดรับเรื่องเข้าสู่สายเกษียน -->
+  <div class="full-view" id="intakeView">
+    <div class="fv-inner">
+      <div class="fv-head">
+        <h2>หนังสือรอเกษียน (ลงรับหนังสือ)</h2>
+        <button class="btn-primary" id="newIntakeBtn">+ ลงรับหนังสือใหม่</button>
+      </div>
+      <div class="fv-hint">ธุรการลงรับหนังสือและระบุกอง/งานที่ได้รับมอบหมาย จากนั้นผู้รับผิดชอบของแต่ละกองกดรับเรื่องเพื่อเข้าสู่สายเกษียนตามปกติ</div>
+      <div class="intake-grid" id="intakeCategoryGrid"></div>
+      <div class="intake-list-wrap" id="intakeListWrap" style="display:none;">
+        <div class="intake-list-head">
+          <button class="btn-sm" id="intakeBackBtn">← กลับไปเลือกกอง/งาน</button>
+          <h3 id="intakeListTitle"></h3>
+        </div>
+        <div id="intakeListBody"></div>
       </div>
     </div>
   </div>
@@ -366,8 +415,8 @@
 
 <div class="modal-back" id="sendNumModalBack">
   <div class="modal">
-    <h3>ขอเลขหนังสือส่ง</h3>
-    <div class="mhint">เลขทะเบียนส่งจะออกให้อัตโนมัติต่อจากเลขล่าสุด ไม่ต้องกรอกเอง</div>
+    <h3 id="sendNumModalTitle">ขอเลขหนังสือส่ง</h3>
+    <div class="mhint" id="sendNumModalHint">เลขทะเบียนส่งจะออกให้อัตโนมัติต่อจากเลขล่าสุด ไม่ต้องกรอกเอง</div>
     <div class="field"><label>ที่</label><input type="text" id="sendAt" placeholder="เช่น อบต.พล 55/2569"></div>
     <div class="field"><label>ลงวันที่</label><input type="text" id="sendDate" placeholder="เช่น 23 ก.ค. 2569"></div>
     <div class="field"><label>จาก</label><input type="text" id="sendFrom" placeholder="หน่วยงาน/บุคคลต้นเรื่อง"></div>
@@ -384,8 +433,8 @@
 
 <div class="modal-back" id="orderNumModalBack">
   <div class="modal">
-    <h3>ขอเลขคำสั่ง</h3>
-    <div class="mhint">เลขที่คำสั่งจะออกให้อัตโนมัติต่อจากเลขล่าสุด ไม่ต้องกรอกเอง</div>
+    <h3 id="orderNumModalTitle">ขอเลขคำสั่ง</h3>
+    <div class="mhint" id="orderNumModalHint">เลขที่คำสั่งจะออกให้อัตโนมัติต่อจากเลขล่าสุด ไม่ต้องกรอกเอง</div>
     <div class="field"><label>ลงวันที่</label><input type="text" id="orderDate" placeholder="เช่น 23 ก.ค. 2569"></div>
     <div class="field"><label>เรื่อง</label><input type="text" id="orderSubject" placeholder="เรื่อง"></div>
     <div class="field"><label>จาก</label><input type="text" id="orderFrom" placeholder="หน่วยงาน/บุคคลต้นเรื่อง"></div>
@@ -393,6 +442,45 @@
     <div class="modal-actions">
       <button class="btn-sm" id="cancelOrderNum">ยกเลิก</button>
       <button class="btn-sm go" id="submitOrderNum">ตกลง</button>
+    </div>
+  </div>
+</div>
+
+<!-- ป๊อปอัพลงรับหนังสือใหม่ -->
+<div class="modal-back" id="intakeModalBack">
+  <div class="modal">
+    <h3>ลงรับหนังสือใหม่</h3>
+    <div class="mhint">เลขที่รับจะออกให้อัตโนมัติต่อจากเลขล่าสุด ไม่ต้องกรอกเอง</div>
+    <div class="field"><label>ที่</label><input type="text" id="intakeAt" placeholder="เช่น อบต.พล 55/2569"></div>
+    <div class="field"><label>ลงวันที่</label><input type="text" id="intakeDate" placeholder="เช่น 23 ก.ค. 2569"></div>
+    <div class="field"><label>จาก</label><input type="text" id="intakeFrom" placeholder="หน่วยงาน/บุคคลต้นเรื่อง"></div>
+    <div class="field"><label>ถึง</label><input type="text" id="intakeTo" placeholder="หน่วยงาน/บุคคลปลายทาง"></div>
+    <div class="field"><label>เรื่อง</label><input type="text" id="intakeSubject" placeholder="เรื่อง"></div>
+    <div class="field"><label>การปฏิบัติ</label><input type="text" id="intakeAction" placeholder="การปฏิบัติ"></div>
+    <div class="field"><label>กองที่ได้รับมอบหมาย</label>
+      <select id="intakeDepartment">
+        <option value="">-- เลือกกอง --</option>
+        <option value="กองช่าง">กองช่าง</option>
+        <option value="กองคลัง">กองคลัง</option>
+        <option value="กองศึกษา">กองศึกษา</option>
+        <option value="กองสาธารณสุข">กองสาธารณสุข</option>
+        <option value="สำนักปลัด">สำนักปลัด</option>
+      </select>
+    </div>
+    <div class="field" id="intakeSectionField" style="display:none;"><label>งานในสำนักปลัด</label>
+      <select id="intakeSection">
+        <option value="งานเกษตร">1. งานเกษตร</option>
+        <option value="งานป้องกัน">2. งานป้องกัน</option>
+        <option value="งานธุรการ">3. งานธุรการ</option>
+        <option value="งานพัฒนาชุมชน">4. งานพัฒนาชุมชน</option>
+        <option value="งานการเจ้าหน้าที่">5. งานการเจ้าหน้าที่</option>
+        <option value="งานวิเคราะห์นโยบายและแผน">6. งานวิเคราะห์นโยบายและแผน</option>
+        <option value="ยิงตรงหาหัวหน้าสำนักปลัด">7. ยิงตรงหาหัวหน้าสำนักปลัด</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-sm" id="cancelIntake">ยกเลิก</button>
+      <button class="btn-sm go" id="submitIntake">ลงรับหนังสือ</button>
     </div>
   </div>
 </div>
@@ -423,6 +511,10 @@ function fileToDataURL(file){
     r.onload = ()=>resolve({name:file.name, dataUrl:r.result});
     r.readAsDataURL(file);
   });
+}
+// [ใหม่] escape ข้อความก่อนใส่ค่าเดิมกลับเข้าไปใน input ตอนแก้ไขรายการ กันเครื่องหมายคำพูดทำ HTML พัง
+function escAttr(s){
+  return String(s==null?'':s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
 // ---- Authentication & API helpers ----
@@ -530,30 +622,36 @@ function renderRoleSelect(){
   };
 }
 
+// สลับหน้าจอระหว่าง "หนังสือทั้งหมด" (docs) / "ขอเลขหนังสือส่ง" (sendnum) / "ขอเลขคำสั่ง" (ordernum)
+// / "หนังสือรอเกษียน" (intake) — ไม่ไปยุ่งกับโค้ดเดิมเลย แค่ซ่อน/โชว์ container ที่เพิ่มเข้ามาใหม่
 function switchView(view){
   const ws = document.querySelector('.workspace');
   const sendView = document.getElementById('sendNumberView');
   const orderView = document.getElementById('orderNumberView');
+  const intakeView = document.getElementById('intakeView');
   if(ws) ws.style.display = (view==='docs') ? 'flex' : 'none';
   if(sendView) sendView.classList.toggle('open', view==='sendnum');
   if(orderView) orderView.classList.toggle('open', view==='ordernum');
+  if(intakeView) intakeView.classList.toggle('open', view==='intake');
 }
 
 document.getElementById('navList').addEventListener('click',(e)=>{
   const item = e.target.closest('.nav-item');
   if(!item) return;
   if(item.dataset.action==='new'){ openModal(); return; }
+  // ถ้าเป็นเมนูที่มี data-view (ขอเลขหนังสือส่ง / ขอเลขคำสั่ง / หนังสือรอเกษียน) ให้สลับไปหน้าจอนั้นแทน
   if(item.dataset.view){
     document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
     item.classList.add('active');
     switchView(item.dataset.view);
     if(item.dataset.view==='sendnum') loadSendNumbers();
     if(item.dataset.view==='ordernum') loadOrderNumbers();
+    if(item.dataset.view==='intake') loadIntakes();
     return;
   }
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   item.classList.add('active');
-  switchView('docs');
+  switchView('docs'); // กลับมาหน้าหนังสือทั้งหมดเสมอเมื่อกดเมนูเดิมพวกนี้
   navFilter = item.dataset.filter;
   activeFilter='all';
   document.querySelectorAll('.chip').forEach(c=>c.classList.toggle('on', c.dataset.chip==='all'));
@@ -819,7 +917,7 @@ function sendBack(d, idx){
 }
 
 /* ===== PRINT ===== */
-// [ใหม่] รวมไฟล์แนบทั้งหมดในทุกขั้นตอนของสายเกษียน (โดยเฉพาะไฟล์ต้นเรื่อง/สแกนจากขั้นแรก)
+// รวมไฟล์แนบทั้งหมดในทุกขั้นตอนของสายเกษียน (โดยเฉพาะไฟล์ต้นเรื่อง/สแกนจากขั้นแรก)
 // มาต่อท้ายเป็น "หน้าใหม่" ในเอกสารเดียวกันตอนพิมพ์ — ไม่ได้แก้ของเดิม แค่เพิ่มส่วนนี้ต่อท้าย
 function buildAttachmentsHtml(d){
     let html = '';
@@ -1093,6 +1191,8 @@ document.getElementById('submitNew').onclick = async ()=>{
    ระบบ "ขอเลขหนังสือส่ง"
    ========================================== */
 let sendNumbers = [];
+let editingSendNum = null; // [ใหม่] เก็บเลข "num" ของรายการที่กำลังแก้ไข (null = กำลังสร้างใหม่)
+
 async function loadSendNumbers(){
   const res = await apiJSON('GET','/api/sendnumbers');
   sendNumbers = Array.isArray(res) ? res : [];
@@ -1102,10 +1202,11 @@ function renderSendNumbers(){
   const body = document.getElementById('sendNumBody');
   if(!body) return;
   if(sendNumbers.length===0){
-    body.innerHTML = `<tr><td colspan="9" class="fv-empty">ยังไม่มีการขอเลขหนังสือส่ง — กด "+ ขอเลขใหม่" เพื่อเริ่มต้น</td></tr>`;
+    body.innerHTML = `<tr><td colspan="10" class="fv-empty">ยังไม่มีการขอเลขหนังสือส่ง — กด "+ ขอเลขใหม่" เพื่อเริ่มต้น</td></tr>`;
     return;
   }
-  const sorted = [...sendNumbers].sort((a,b)=> (b.num||0) - (a.num||0));
+  // [ใหม่] เรียงจากเลขน้อยไปมาก (1 → 100 ...) ตามที่ขอ ให้ดูเป็นทะเบียนต่อเนื่องเวลาพิมพ์/ดูรายการ
+  const sorted = [...sendNumbers].sort((a,b)=> (a.num||0) - (b.num||0));
   body.innerHTML = sorted.map(r=>`
     <tr>
       <td><span class="fv-num-badge">${r.num}</span></td>
@@ -1117,15 +1218,55 @@ function renderSendNumbers(){
       <td>${r.action||'-'}</td>
       <td>${r.note||'-'}</td>
       <td>${r.requestedBy||'-'}</td>
+      <td>
+        <div class="fv-row-actions">
+          <span class="fv-icon-btn" data-editsend="${r.num}" title="แก้ไข">✏️</span>
+          <span class="fv-icon-btn" data-delsend="${r.num}" title="ลบ">🗑️</span>
+        </div>
+      </td>
     </tr>`).join('');
+
+  // [ใหม่] ปุ่มแก้ไข — เปิดป๊อปอัพเดิมพร้อมข้อมูลเก่า แล้วสลับโหมดเป็น "แก้ไข"
+  body.querySelectorAll('[data-editsend]').forEach(btn=>{
+    btn.onclick = ()=>{
+      const rec = sendNumbers.find(r=> String(r.num)===btn.dataset.editsend);
+      if(!rec) return;
+      editingSendNum = rec.num;
+      document.getElementById('sendNumModalTitle').textContent = `แก้ไขเลขหนังสือส่ง (เลขที่ ${rec.num})`;
+      document.getElementById('sendNumModalHint').textContent = 'แก้ไขข้อมูลแล้วกดตกลง เลขทะเบียนเดิมจะไม่เปลี่ยน';
+      document.getElementById('sendAt').value = rec.at || '';
+      document.getElementById('sendDate').value = rec.date || '';
+      document.getElementById('sendFrom').value = rec.from || '';
+      document.getElementById('sendTo').value = rec.to || '';
+      document.getElementById('sendSubject').value = rec.subject || '';
+      document.getElementById('sendAction').value = rec.action || '';
+      document.getElementById('sendNote').value = rec.note || '';
+      document.getElementById('sendNumModalBack').classList.add('open');
+    };
+  });
+  // [ใหม่] ปุ่มลบ — ยืนยันก่อนแล้วเรียก DELETE
+  body.querySelectorAll('[data-delsend]').forEach(btn=>{
+    btn.onclick = async ()=>{
+      if(!confirm(`ยืนยันลบรายการเลขทะเบียนส่งที่ ${btn.dataset.delsend} ถาวร?`)) return;
+      const res = await apiJSON('DELETE', `/api/sendnumbers/${btn.dataset.delsend}`);
+      if(res && res.ok){ showToast('🗑️ ลบรายการเรียบร้อย', 'success'); await loadSendNumbers(); }
+      else showToast('ไม่สามารถลบได้' + (res && res.error ? ': '+res.error : ''), 'error');
+    };
+  });
 }
 document.getElementById('newSendNumBtn').onclick = ()=>{
+  // [ใหม่] เปิดป๊อปอัพในโหมด "สร้างใหม่" เสมอ — ล้างค่าเดิมและสถานะแก้ไขทิ้งก่อน
+  editingSendNum = null;
+  document.getElementById('sendNumModalTitle').textContent = 'ขอเลขหนังสือส่ง';
+  document.getElementById('sendNumModalHint').textContent = 'เลขทะเบียนส่งจะออกให้อัตโนมัติต่อจากเลขล่าสุด ไม่ต้องกรอกเอง';
+  ['sendAt','sendDate','sendFrom','sendTo','sendSubject','sendAction','sendNote'].forEach(id=>{ document.getElementById(id).value=''; });
   document.getElementById('sendNumModalBack').classList.add('open');
 };
 document.getElementById('cancelSendNum').onclick = ()=>{
   document.getElementById('sendNumModalBack').classList.remove('open');
+  editingSendNum = null;
 };
-document.getElementById('sendNumModalBack').addEventListener('click',(e)=>{ if(e.target.id==='sendNumModalBack') document.getElementById('sendNumModalBack').classList.remove('open'); });
+document.getElementById('sendNumModalBack').addEventListener('click',(e)=>{ if(e.target.id==='sendNumModalBack'){ document.getElementById('sendNumModalBack').classList.remove('open'); editingSendNum = null; } });
 document.getElementById('submitSendNum').onclick = async ()=>{
   const payload = {
     at: document.getElementById('sendAt').value.trim(),
@@ -1137,6 +1278,19 @@ document.getElementById('submitSendNum').onclick = async ()=>{
     note: document.getElementById('sendNote').value.trim(),
   };
   if(!payload.subject){ showToast('กรุณาระบุเรื่อง','error'); return; }
+  // [ใหม่] ถ้ากำลังแก้ไขอยู่ ให้ยิง PUT ไปที่เลขเดิม แทนการสร้างใหม่ด้วย POST
+  if(editingSendNum !== null){
+    const res = await apiJSON('PUT', `/api/sendnumbers/${editingSendNum}`, payload);
+    if(res && res.num){
+      showToast(`✅ แก้ไขเลขทะเบียนส่งที่ ${res.num} เรียบร้อย`, 'success');
+      document.getElementById('sendNumModalBack').classList.remove('open');
+      editingSendNum = null;
+      await loadSendNumbers();
+    } else {
+      showToast('ไม่สามารถแก้ไขได้' + (res && res.error ? ': '+res.error : ''), 'error');
+    }
+    return;
+  }
   const res = await apiJSON('POST','/api/sendnumbers', payload);
   if(res && res.num){
     showToast(`✅ ออกเลขทะเบียนส่งที่ ${res.num} เรียบร้อย`, 'success');
@@ -1148,10 +1302,39 @@ document.getElementById('submitSendNum').onclick = async ()=>{
   }
 };
 
+// [ใหม่] พิมพ์ตารางรายการขอเลขหนังสือส่งทั้งหมด เรียงจากเลข 1 ขึ้นไป เป็นเอกสารเดียว
+function printSendNumbers(){
+  const sorted = [...sendNumbers].sort((a,b)=> (a.num||0) - (b.num||0));
+  const rows = sorted.map(r=>`
+    <tr>
+      <td>${r.num}</td>
+      <td>${r.at||'-'}</td>
+      <td>${r.date||'-'}</td>
+      <td>${r.from||'-'}</td>
+      <td>${r.to||'-'}</td>
+      <td>${r.subject||'-'}</td>
+      <td>${r.action||'-'}</td>
+      <td>${r.note||'-'}</td>
+    </tr>`).join('');
+  document.getElementById('printArea').innerHTML = `
+    <div class="p-doc" style="max-width:100%;">
+      <div class="p-head"><div class="crest">เทศบาลตำบลพระเหลา</div><h2>ทะเบียนหนังสือส่ง</h2></div>
+      <div class="p-meta"><span>รวม ${sorted.length} รายการ</span><span>วันที่พิมพ์: ${todayStr()}</span></div>
+      <table class="p-list-table">
+        <thead><tr><th>เลขที่ส่ง</th><th>ที่</th><th>ลงวันที่</th><th>จาก</th><th>ถึง</th><th>เรื่อง</th><th>การปฏิบัติ</th><th>หมายเหตุ</th></tr></thead>
+        <tbody>${rows || '<tr><td colspan="8" style="text-align:center;">ไม่มีรายการ</td></tr>'}</tbody>
+      </table>
+    </div>`;
+  window.print();
+}
+document.getElementById('printSendNumBtn').onclick = printSendNumbers;
+
 /* ==========================================
    ระบบ "ขอเลขคำสั่ง"
    ========================================== */
 let orderNumbers = [];
+let editingOrderNum = null; // [ใหม่] เก็บเลข "num" ของรายการที่กำลังแก้ไข (null = กำลังสร้างใหม่)
+
 async function loadOrderNumbers(){
   const res = await apiJSON('GET','/api/ordernumbers');
   orderNumbers = Array.isArray(res) ? res : [];
@@ -1161,10 +1344,11 @@ function renderOrderNumbers(){
   const body = document.getElementById('orderNumBody');
   if(!body) return;
   if(orderNumbers.length===0){
-    body.innerHTML = `<tr><td colspan="6" class="fv-empty">ยังไม่มีการขอเลขคำสั่ง — กด "+ ขอเลขใหม่" เพื่อเริ่มต้น</td></tr>`;
+    body.innerHTML = `<tr><td colspan="7" class="fv-empty">ยังไม่มีการขอเลขคำสั่ง — กด "+ ขอเลขใหม่" เพื่อเริ่มต้น</td></tr>`;
     return;
   }
-  const sorted = [...orderNumbers].sort((a,b)=> (b.num||0) - (a.num||0));
+  // [ใหม่] เรียงจากเลขน้อยไปมาก ตามที่ขอ
+  const sorted = [...orderNumbers].sort((a,b)=> (a.num||0) - (b.num||0));
   body.innerHTML = sorted.map(r=>`
     <tr>
       <td><span class="fv-num-badge">${r.num}</span></td>
@@ -1173,15 +1357,49 @@ function renderOrderNumbers(){
       <td>${r.from||'-'}</td>
       <td>${r.note||'-'}</td>
       <td>${r.requestedBy||'-'}</td>
+      <td>
+        <div class="fv-row-actions">
+          <span class="fv-icon-btn" data-editorder="${r.num}" title="แก้ไข">✏️</span>
+          <span class="fv-icon-btn" data-delorder="${r.num}" title="ลบ">🗑️</span>
+        </div>
+      </td>
     </tr>`).join('');
+
+  body.querySelectorAll('[data-editorder]').forEach(btn=>{
+    btn.onclick = ()=>{
+      const rec = orderNumbers.find(r=> String(r.num)===btn.dataset.editorder);
+      if(!rec) return;
+      editingOrderNum = rec.num;
+      document.getElementById('orderNumModalTitle').textContent = `แก้ไขเลขคำสั่ง (เลขที่ ${rec.num})`;
+      document.getElementById('orderNumModalHint').textContent = 'แก้ไขข้อมูลแล้วกดตกลง เลขที่คำสั่งเดิมจะไม่เปลี่ยน';
+      document.getElementById('orderDate').value = rec.date || '';
+      document.getElementById('orderSubject').value = rec.subject || '';
+      document.getElementById('orderFrom').value = rec.from || '';
+      document.getElementById('orderNote').value = rec.note || '';
+      document.getElementById('orderNumModalBack').classList.add('open');
+    };
+  });
+  body.querySelectorAll('[data-delorder]').forEach(btn=>{
+    btn.onclick = async ()=>{
+      if(!confirm(`ยืนยันลบรายการเลขคำสั่งที่ ${btn.dataset.delorder} ถาวร?`)) return;
+      const res = await apiJSON('DELETE', `/api/ordernumbers/${btn.dataset.delorder}`);
+      if(res && res.ok){ showToast('🗑️ ลบรายการเรียบร้อย', 'success'); await loadOrderNumbers(); }
+      else showToast('ไม่สามารถลบได้' + (res && res.error ? ': '+res.error : ''), 'error');
+    };
+  });
 }
 document.getElementById('newOrderNumBtn').onclick = ()=>{
+  editingOrderNum = null;
+  document.getElementById('orderNumModalTitle').textContent = 'ขอเลขคำสั่ง';
+  document.getElementById('orderNumModalHint').textContent = 'เลขที่คำสั่งจะออกให้อัตโนมัติต่อจากเลขล่าสุด ไม่ต้องกรอกเอง';
+  ['orderDate','orderSubject','orderFrom','orderNote'].forEach(id=>{ document.getElementById(id).value=''; });
   document.getElementById('orderNumModalBack').classList.add('open');
 };
 document.getElementById('cancelOrderNum').onclick = ()=>{
   document.getElementById('orderNumModalBack').classList.remove('open');
+  editingOrderNum = null;
 };
-document.getElementById('orderNumModalBack').addEventListener('click',(e)=>{ if(e.target.id==='orderNumModalBack') document.getElementById('orderNumModalBack').classList.remove('open'); });
+document.getElementById('orderNumModalBack').addEventListener('click',(e)=>{ if(e.target.id==='orderNumModalBack'){ document.getElementById('orderNumModalBack').classList.remove('open'); editingOrderNum = null; } });
 document.getElementById('submitOrderNum').onclick = async ()=>{
   const payload = {
     date: document.getElementById('orderDate').value.trim(),
@@ -1190,6 +1408,18 @@ document.getElementById('submitOrderNum').onclick = async ()=>{
     note: document.getElementById('orderNote').value.trim(),
   };
   if(!payload.subject){ showToast('กรุณาระบุเรื่อง','error'); return; }
+  if(editingOrderNum !== null){
+    const res = await apiJSON('PUT', `/api/ordernumbers/${editingOrderNum}`, payload);
+    if(res && res.num){
+      showToast(`✅ แก้ไขเลขคำสั่งที่ ${res.num} เรียบร้อย`, 'success');
+      document.getElementById('orderNumModalBack').classList.remove('open');
+      editingOrderNum = null;
+      await loadOrderNumbers();
+    } else {
+      showToast('ไม่สามารถแก้ไขได้' + (res && res.error ? ': '+res.error : ''), 'error');
+    }
+    return;
+  }
   const res = await apiJSON('POST','/api/ordernumbers', payload);
   if(res && res.num){
     showToast(`✅ ออกเลขที่คำสั่ง ${res.num} เรียบร้อย`, 'success');
@@ -1198,6 +1428,151 @@ document.getElementById('submitOrderNum').onclick = async ()=>{
     await loadOrderNumbers();
   } else {
     showToast('ไม่สามารถขอเลขได้' + (res && res.error ? ': '+res.error : ''), 'error');
+  }
+};
+
+// [ใหม่] พิมพ์ตารางรายการขอเลขคำสั่งทั้งหมด เรียงจากเลข 1 ขึ้นไป เป็นเอกสารเดียว
+function printOrderNumbers(){
+  const sorted = [...orderNumbers].sort((a,b)=> (a.num||0) - (b.num||0));
+  const rows = sorted.map(r=>`
+    <tr>
+      <td>${r.num}</td>
+      <td>${r.date||'-'}</td>
+      <td>${r.subject||'-'}</td>
+      <td>${r.from||'-'}</td>
+      <td>${r.note||'-'}</td>
+    </tr>`).join('');
+  document.getElementById('printArea').innerHTML = `
+    <div class="p-doc" style="max-width:100%;">
+      <div class="p-head"><div class="crest">เทศบาลตำบลพระเหลา</div><h2>ทะเบียนคำสั่ง</h2></div>
+      <div class="p-meta"><span>รวม ${sorted.length} รายการ</span><span>วันที่พิมพ์: ${todayStr()}</span></div>
+      <table class="p-list-table">
+        <thead><tr><th>เลขที่คำสั่ง</th><th>ลงวันที่</th><th>เรื่อง</th><th>จาก</th><th>หมายเหตุ</th></tr></thead>
+        <tbody>${rows || '<tr><td colspan="5" style="text-align:center;">ไม่มีรายการ</td></tr>'}</tbody>
+      </table>
+    </div>`;
+  window.print();
+}
+document.getElementById('printOrderNumBtn').onclick = printOrderNumbers;
+
+/* ==========================================
+   ระบบ "ลงรับหนังสือ / หนังสือรอเกษียน"
+   ========================================== */
+const DEPARTMENTS = ['กองช่าง','กองคลัง','กองศึกษา','กองสาธารณสุข','สำนักปลัด'];
+
+let intakes = [];
+let currentIntakeCategory = null;
+
+async function loadIntakes(){
+  const res = await apiJSON('GET','/api/intakes');
+  intakes = Array.isArray(res) ? res : [];
+  renderIntakeCategories();
+  if(currentIntakeCategory) renderIntakeList(currentIntakeCategory);
+}
+
+function renderIntakeCategories(){
+  const grid = document.getElementById('intakeCategoryGrid');
+  if(!grid) return;
+  grid.innerHTML = DEPARTMENTS.map(dep=>{
+    const count = intakes.filter(r=> r.status==='pending' && r.department===dep).length;
+    const badge = count>0 ? `<span class="intake-cat-badge">${count}</span>` : '';
+    return `<div class="intake-cat-btn" data-dep="${dep}">${badge}${dep}</div>`;
+  }).join('');
+  grid.querySelectorAll('.intake-cat-btn').forEach(btn=>{
+    btn.onclick = ()=> openIntakeCategory(btn.dataset.dep);
+  });
+}
+
+function openIntakeCategory(dep){
+  currentIntakeCategory = dep;
+  document.getElementById('intakeListWrap').style.display = 'block';
+  document.getElementById('intakeListTitle').textContent = dep + ' — รายการรอรับเรื่อง';
+  renderIntakeList(dep);
+}
+document.getElementById('intakeBackBtn').onclick = ()=>{
+  currentIntakeCategory = null;
+  document.getElementById('intakeListWrap').style.display = 'none';
+};
+
+function renderIntakeList(dep){
+  const wrap = document.getElementById('intakeListBody');
+  const items = intakes.filter(r=> r.status==='pending' && r.department===dep);
+  if(items.length===0){
+    wrap.innerHTML = `<div class="empty-list">ไม่มีเรื่องค้างรับในหมวดนี้</div>`;
+    return;
+  }
+  wrap.innerHTML = items.map(r=>`
+    <div class="intake-item-card">
+      <div class="intake-item-top">
+        <span class="fv-num-badge">เลขที่รับ ${r.receiveNo}</span>
+        ${r.section ? `<span class="status-badge status-pending">${r.section}</span>` : ''}
+      </div>
+      <div class="intake-item-title">${r.subject}</div>
+      <div class="intake-item-meta">
+        <div><b>ที่:</b> ${r.at||'-'} &nbsp; <b>ลงวันที่:</b> ${r.date||'-'}</div>
+        <div><b>จาก:</b> ${r.from||'-'} &nbsp; <b>ถึง:</b> ${r.to||'-'}</div>
+        <div><b>การปฏิบัติ:</b> ${r.action||'-'}</div>
+        <div><b>ลงรับโดย:</b> ${r.registeredBy||'-'}</div>
+      </div>
+      <div class="rung-actions" style="margin-top:10px;">
+        <button class="btn-sm go" data-claim="${r.id}">✓ รับเรื่องนี้ → เข้าสู่สายเกษียน</button>
+      </div>
+    </div>`).join('');
+  wrap.querySelectorAll('[data-claim]').forEach(btn=>{
+    btn.onclick = async ()=>{
+      const res = await apiJSON('POST', `/api/intakes/${btn.dataset.claim}/claim`, {});
+      if(res && res.doc){
+        showToast(`✅ รับเรื่องเข้าสู่สายเกษียนแล้ว (${res.doc.no})`, 'success');
+        await loadIntakes();
+        await loadDocsFromServer();
+        const idx = docs.findIndex(dd=> dd.id === res.doc.id);
+        if(idx!==-1){ selectedIdx = idx; }
+        document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+        const allItem = document.querySelector('.nav-item[data-filter="all"]');
+        if(allItem) allItem.classList.add('active');
+        switchView('docs');
+        renderList(); renderDetail();
+      } else {
+        showToast('ไม่สามารถรับเรื่องได้' + (res && res.error ? ': '+res.error : ''), 'error');
+      }
+    };
+  });
+}
+
+document.getElementById('intakeDepartment').addEventListener('change', (e)=>{
+  document.getElementById('intakeSectionField').style.display = (e.target.value === 'สำนักปลัด') ? 'block' : 'none';
+});
+document.getElementById('newIntakeBtn').onclick = ()=>{
+  document.getElementById('intakeModalBack').classList.add('open');
+};
+document.getElementById('cancelIntake').onclick = ()=>{
+  document.getElementById('intakeModalBack').classList.remove('open');
+};
+document.getElementById('intakeModalBack').addEventListener('click',(e)=>{ if(e.target.id==='intakeModalBack') document.getElementById('intakeModalBack').classList.remove('open'); });
+document.getElementById('submitIntake').onclick = async ()=>{
+  const department = document.getElementById('intakeDepartment').value;
+  const payload = {
+    at: document.getElementById('intakeAt').value.trim(),
+    date: document.getElementById('intakeDate').value.trim(),
+    from: document.getElementById('intakeFrom').value.trim(),
+    to: document.getElementById('intakeTo').value.trim(),
+    subject: document.getElementById('intakeSubject').value.trim(),
+    action: document.getElementById('intakeAction').value.trim(),
+    department: department,
+    section: department==='สำนักปลัด' ? document.getElementById('intakeSection').value : ''
+  };
+  if(!payload.subject){ showToast('กรุณาระบุเรื่อง','error'); return; }
+  if(!payload.department){ showToast('กรุณาเลือกกองที่ได้รับมอบหมาย','error'); return; }
+  const res = await apiJSON('POST','/api/intakes', payload);
+  if(res && res.receiveNo){
+    showToast(`✅ ลงรับหนังสือเลขที่ ${res.receiveNo} เรียบร้อย`, 'success');
+    document.getElementById('intakeModalBack').classList.remove('open');
+    ['intakeAt','intakeDate','intakeFrom','intakeTo','intakeSubject','intakeAction'].forEach(id=>{ document.getElementById(id).value=''; });
+    document.getElementById('intakeDepartment').value = '';
+    document.getElementById('intakeSectionField').style.display = 'none';
+    await loadIntakes();
+  } else {
+    showToast('ไม่สามารถลงรับหนังสือได้' + (res && res.error ? ': '+res.error : ''), 'error');
   }
 };
 
