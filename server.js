@@ -37,7 +37,7 @@ const SESSIONS_FILE = path.join(DATA_DIR, 'sessions.json');
 // ไฟล์เก็บข้อมูล 2 ระบบใหม่: ขอเลขหนังสือส่ง / ขอเลขคำสั่ง
 const SEND_NUM_FILE = path.join(DATA_DIR, 'send_numbers.json');
 const ORDER_NUM_FILE = path.join(DATA_DIR, 'order_numbers.json');
-// [ใหม่] ไฟล์เก็บข้อมูลระบบ "ลงรับหนังสือ" (ก่อนเข้าสู่สายเกษียน)
+// ไฟล์เก็บข้อมูลระบบ "ลงรับหนังสือ" (ก่อนเข้าสู่สายเกษียน)
 const INTAKE_FILE = path.join(DATA_DIR, 'intakes.json');
 
 function ensureDataDir(){
@@ -116,7 +116,7 @@ function saveOrderNumbers(list){
   catch(e){ console.error('order numbers save failed', e); return false; }
 }
 
-// [ใหม่] ตัวช่วยจัดการไฟล์สำหรับ "ลงรับหนังสือ" (ก่อนเข้าสู่สายเกษียน)
+// ตัวช่วยจัดการไฟล์สำหรับ "ลงรับหนังสือ" (ก่อนเข้าสู่สายเกษียน)
 function ensureIntakeFile(){
   if(!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
   if(!fs.existsSync(INTAKE_FILE)) fs.writeFileSync(INTAKE_FILE, '[]', 'utf8');
@@ -449,6 +449,39 @@ app.post('/api/sendnumbers', (req, res) => {
   saveSendNumbers(list);
   res.json(record);
 });
+// [ใหม่] แก้ไขรายการขอเลขหนังสือส่ง — ทุกคนที่ล็อกอินอยู่แก้ไขได้ (ไม่จำกัดเฉพาะแอดมิน ตามที่ขอ)
+// อ้างอิงด้วย "num" เพราะเป็นเลขทะเบียนที่ไม่ซ้ำกันอยู่แล้วในแต่ละรายการ
+app.put('/api/sendnumbers/:num', (req, res) => {
+  const s = getSessionFromReq(req);
+  if(!s) return res.status(401).json({ error: 'unauthenticated' });
+  const list = loadSendNumbers();
+  const numVal = Number(req.params.num);
+  const rec = list.find(r => Number(r.num) === numVal);
+  if(!rec) return res.status(404).json({ error: 'not found' });
+  const { at, date, from, to, subject, action, note } = req.body || {};
+  if(!subject) return res.status(400).json({ error: 'กรุณาระบุเรื่อง' });
+  rec.at = at || '';
+  rec.date = date || '';
+  rec.from = from || '';
+  rec.to = to || '';
+  rec.subject = subject || '';
+  rec.action = action || '';
+  rec.note = note || '';
+  saveSendNumbers(list);
+  res.json(rec);
+});
+// [ใหม่] ลบรายการขอเลขหนังสือส่ง — ทุกคนที่ล็อกอินอยู่ลบได้ (ไม่จำกัดเฉพาะแอดมิน ตามที่ขอ)
+app.delete('/api/sendnumbers/:num', (req, res) => {
+  const s = getSessionFromReq(req);
+  if(!s) return res.status(401).json({ error: 'unauthenticated' });
+  const list = loadSendNumbers();
+  const numVal = Number(req.params.num);
+  const idx = list.findIndex(r => Number(r.num) === numVal);
+  if(idx === -1) return res.status(404).json({ error: 'not found' });
+  const [removed] = list.splice(idx, 1);
+  saveSendNumbers(list);
+  res.json({ ok: true, num: removed.num });
+});
 
 // ==========================================
 // API: ขอเลขคำสั่ง — ออกเลขที่คำสั่งอัตโนมัติ เรียงต่อกันไม่ให้หลงเลข
@@ -479,9 +512,38 @@ app.post('/api/ordernumbers', (req, res) => {
   saveOrderNumbers(list);
   res.json(record);
 });
+// [ใหม่] แก้ไขรายการขอเลขคำสั่ง — ทุกคนที่ล็อกอินอยู่แก้ไขได้ (ไม่จำกัดเฉพาะแอดมิน ตามที่ขอ)
+app.put('/api/ordernumbers/:num', (req, res) => {
+  const s = getSessionFromReq(req);
+  if(!s) return res.status(401).json({ error: 'unauthenticated' });
+  const list = loadOrderNumbers();
+  const numVal = Number(req.params.num);
+  const rec = list.find(r => Number(r.num) === numVal);
+  if(!rec) return res.status(404).json({ error: 'not found' });
+  const { date, subject, from, note } = req.body || {};
+  if(!subject) return res.status(400).json({ error: 'กรุณาระบุเรื่อง' });
+  rec.date = date || '';
+  rec.subject = subject || '';
+  rec.from = from || '';
+  rec.note = note || '';
+  saveOrderNumbers(list);
+  res.json(rec);
+});
+// [ใหม่] ลบรายการขอเลขคำสั่ง — ทุกคนที่ล็อกอินอยู่ลบได้ (ไม่จำกัดเฉพาะแอดมิน ตามที่ขอ)
+app.delete('/api/ordernumbers/:num', (req, res) => {
+  const s = getSessionFromReq(req);
+  if(!s) return res.status(401).json({ error: 'unauthenticated' });
+  const list = loadOrderNumbers();
+  const numVal = Number(req.params.num);
+  const idx = list.findIndex(r => Number(r.num) === numVal);
+  if(idx === -1) return res.status(404).json({ error: 'not found' });
+  const [removed] = list.splice(idx, 1);
+  saveOrderNumbers(list);
+  res.json({ ok: true, num: removed.num });
+});
 
 // ==========================================
-// [ใหม่] API: ลงรับหนังสือ (ก่อนเข้าสู่สายเกษียน)
+// API: ลงรับหนังสือ (ก่อนเข้าสู่สายเกษียน)
 // ==========================================
 
 // รายการลงรับหนังสือทั้งหมด (ทั้งที่ยังรอรับ และรับไปแล้ว)
@@ -495,7 +557,10 @@ app.post('/api/intakes', (req, res) => {
   const s = getSessionFromReq(req);
   if(!s) return res.status(401).json({ error: 'unauthenticated' });
   const users = loadUsers(); const user = users.find(u => u.id === s.userId);
-  const { at, date, from, to, subject, action, department, section } = req.body || {};
+  // [แก้ไข] เพิ่ม note และ files เข้ามารับค่าจากฟอร์มด้วย — เดิมโค้ดจุดนี้ไม่ได้ดึง "files" ออกจาก
+  // req.body เลย ทำให้ไฟล์ที่แนบตอนลงรับหนังสือ (ส่งมาจากหน้าเว็บแล้ว) ถูกทิ้งไปเงียบๆ ไม่ถูกบันทึก
+  // นี่คือสาเหตุจริงที่ไฟล์แนบไม่ไปโผล่ในสายเกษียนตอนกดรับเรื่อง
+  const { at, date, from, to, subject, action, note, department, section, files } = req.body || {};
   if(!subject) return res.status(400).json({ error: 'กรุณาระบุเรื่อง' });
   if(!department) return res.status(400).json({ error: 'กรุณาเลือกกองที่ได้รับมอบหมาย' });
 
@@ -510,8 +575,10 @@ app.post('/api/intakes', (req, res) => {
     to: to || '',
     subject: subject || '',
     action: action || '',
+    note: note || '',
     department: department,
     section: department === 'สำนักปลัด' ? (section || '') : '',
+    files: Array.isArray(files) ? files : [], // [แก้ไข] เก็บไฟล์แนบไว้ในรายการลงรับ
     status: 'pending',
     claimedBy: '',
     claimedAt: null,
@@ -522,6 +589,49 @@ app.post('/api/intakes', (req, res) => {
   list.push(record);
   saveIntakes(list);
   res.json(record);
+});
+
+// [ใหม่] แก้ไขรายการลงรับหนังสือ — ทำได้เฉพาะรายการที่ยังไม่ถูกรับเรื่อง (status==='pending')
+// ถ้าไม่ได้ส่ง "files" มาด้วย (เช่น แก้ไขแต่ข้อความ ไม่ได้แนบไฟล์ใหม่) จะคงไฟล์เดิมไว้ ไม่ลบทิ้ง
+app.put('/api/intakes/:id', (req, res) => {
+  const s = getSessionFromReq(req);
+  if(!s) return res.status(401).json({ error: 'unauthenticated' });
+  const list = loadIntakes();
+  const rec = list.find(r => r.id === req.params.id);
+  if(!rec) return res.status(404).json({ error: 'not found' });
+  if(rec.status === 'claimed') return res.status(409).json({ error: 'รายการนี้ถูกรับเรื่องไปแล้ว ไม่สามารถแก้ไขได้' });
+
+  const { at, date, from, to, subject, action, note, department, section, files } = req.body || {};
+  if(!subject) return res.status(400).json({ error: 'กรุณาระบุเรื่อง' });
+  if(!department) return res.status(400).json({ error: 'กรุณาเลือกกองที่ได้รับมอบหมาย' });
+
+  rec.at = at || '';
+  rec.date = date || '';
+  rec.from = from || '';
+  rec.to = to || '';
+  rec.subject = subject || '';
+  rec.action = action || '';
+  rec.note = note || '';
+  rec.department = department;
+  rec.section = department === 'สำนักปลัด' ? (section || '') : '';
+  if(Array.isArray(files)) rec.files = files; // แก้ไขไฟล์เฉพาะเมื่อมีการส่งไฟล์ชุดใหม่มาเท่านั้น
+
+  saveIntakes(list);
+  res.json(rec);
+});
+
+// [ใหม่] ลบรายการลงรับหนังสือ — ทำได้เฉพาะรายการที่ยังไม่ถูกรับเรื่อง (status==='pending')
+app.delete('/api/intakes/:id', (req, res) => {
+  const s = getSessionFromReq(req);
+  if(!s) return res.status(401).json({ error: 'unauthenticated' });
+  const list = loadIntakes();
+  const idx = list.findIndex(r => r.id === req.params.id);
+  if(idx === -1) return res.status(404).json({ error: 'not found' });
+  if(list[idx].status === 'claimed') return res.status(409).json({ error: 'รายการนี้ถูกรับเรื่องไปแล้ว ไม่สามารถลบได้' });
+
+  const [removed] = list.splice(idx, 1);
+  saveIntakes(list);
+  res.json({ ok: true, id: removed.id });
 });
 
 // กดรับเรื่อง — แปลงรายการที่ลงรับไว้ ให้กลายเป็นหนังสือจริงเข้าสู่สายเกษียนตามปกติ
@@ -541,13 +651,17 @@ app.post('/api/intakes/:id/claim', (req, res) => {
   const beYear = new Date().getFullYear() + 543;
   const docNo = `ที่ อบต.พล ${seq}/${beYear}`;
 
+  // [แก้ไข] ดึงไฟล์แนบที่บันทึกไว้ตอนลงรับหนังสือ (intake.files) มาใส่ในขั้นตอนแรกของสายเกษียน (chain[0])
+  // เพื่อให้เอกสารต้นเรื่อง/สแกนที่แนบมาตอนลงรับ ติดไปกับหนังสือทุกขั้นตอนเหมือนตอนสร้างหนังสือใหม่ปกติ
+  const intakeFiles = Array.isArray(intake.files) ? intake.files : [];
+
   const LEVELS_COUNT = 7;
   const chain = Array.from({ length: LEVELS_COUNT }).map((_, i) => ({
     name: i === 0 ? (user ? (user.fullName || user.name || user.username) : '') : '',
     date: '',
     note: i === 0 ? `รับเรื่องจากการลงรับหนังสือ เลขที่รับ ${intake.receiveNo} (${intake.department}${intake.section ? ' - ' + intake.section : ''})` : '',
     state: 'active',
-    files: [],
+    files: i === 0 ? intakeFiles : [], // [แก้ไข] เดิมเป็น [] เสมอ ทำให้ไฟล์แนบตอนลงรับไม่ติดไปด้วย
     signature: null
   }));
 

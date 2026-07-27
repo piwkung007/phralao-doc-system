@@ -2,7 +2,7 @@
 <html lang="th">
 <head>
 <meta charset="UTF-8">
-<title>ระบบธุรการกลางสำนักปลัดเทศบาล | เทศบาลตำบลพระเหลา</title>
+<title> ธุรการกลาง | เทศบาลตำบลพระเหลา</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -68,6 +68,10 @@
   .detail-tags{display:flex;gap:16px;flex-wrap:wrap;font-size:12.5px;color:var(--ink-soft);align-items:center;}
   .detail-tags b{color:var(--ink);font-weight:600;}
   .print-btn{margin-left:auto;background:var(--green);color:#fff;border:none;padding:8px 16px;border-radius:8px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;}
+
+  /* [ใหม่] กล่องเอกสารต้นเรื่อง — อยู่บนสุดของหน้ารายละเอียด เห็นได้ทันทีทุกคนโดยไม่ต้องเลื่อนดู */
+  .orig-attach-box{background:#FFFBEA;border:1px solid var(--gold-light);border-radius:var(--radius);padding:14px 16px;margin-bottom:20px;}
+  .orig-attach-label{font-size:12.5px;font-weight:700;color:var(--navy);margin-bottom:8px;}
 
   .section-title{font-size:13px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.6px;margin:6px 0 18px;display:flex;align-items:center;gap:10px;}
   .section-title::after{content:'';flex:1;height:1px;background:var(--line);}
@@ -152,7 +156,7 @@
   .p-attach-img{max-width:100%;display:block;}
   .p-attach-pdf{width:100%;height:95vh;border:none;}
 
-  /* [ใหม่] ตารางพิมพ์รายการขอเลขหนังสือส่ง / ขอเลขคำสั่ง */
+  /* ตารางพิมพ์รายการขอเลขหนังสือส่ง / ขอเลขคำสั่ง */
   .p-list-table{width:100%;border-collapse:collapse;font-size:12.5px;}
   .p-list-table th, .p-list-table td{border:1px solid #333;padding:6px 8px;text-align:left;vertical-align:top;}
   .p-list-table th{background:#eee;font-weight:700;}
@@ -325,7 +329,10 @@
     <div class="fv-inner">
       <div class="fv-head">
         <h2>หนังสือรอเกษียน (ลงรับหนังสือ)</h2>
-        <button class="btn-primary" id="newIntakeBtn">+ ลงรับหนังสือใหม่</button>
+        <div class="fv-head-actions">
+          <button class="btn-sm" id="printIntakeBtn">🖨️ พิมพ์ทะเบียนรับ</button>
+          <button class="btn-primary" id="newIntakeBtn">+ ลงรับหนังสือใหม่</button>
+        </div>
       </div>
       <div class="fv-hint">ธุรการลงรับหนังสือและระบุกอง/งานที่ได้รับมอบหมาย จากนั้นผู้รับผิดชอบของแต่ละกองกดรับเรื่องเพื่อเข้าสู่สายเกษียนตามปกติ</div>
       <div class="intake-grid" id="intakeCategoryGrid"></div>
@@ -449,14 +456,15 @@
 <!-- ป๊อปอัพลงรับหนังสือใหม่ -->
 <div class="modal-back" id="intakeModalBack">
   <div class="modal">
-    <h3>ลงรับหนังสือใหม่</h3>
-    <div class="mhint">เลขที่รับจะออกให้อัตโนมัติต่อจากเลขล่าสุด ไม่ต้องกรอกเอง</div>
+    <h3 id="intakeModalTitle">ลงรับหนังสือใหม่</h3>
+    <div class="mhint" id="intakeModalHint">เลขที่รับจะออกให้อัตโนมัติต่อจากเลขล่าสุด ไม่ต้องกรอกเอง</div>
     <div class="field"><label>ที่</label><input type="text" id="intakeAt" placeholder="เช่น อบต.พล 55/2569"></div>
     <div class="field"><label>ลงวันที่</label><input type="text" id="intakeDate" placeholder="เช่น 23 ก.ค. 2569"></div>
     <div class="field"><label>จาก</label><input type="text" id="intakeFrom" placeholder="หน่วยงาน/บุคคลต้นเรื่อง"></div>
     <div class="field"><label>ถึง</label><input type="text" id="intakeTo" placeholder="หน่วยงาน/บุคคลปลายทาง"></div>
     <div class="field"><label>เรื่อง</label><input type="text" id="intakeSubject" placeholder="เรื่อง"></div>
     <div class="field"><label>การปฏิบัติ</label><input type="text" id="intakeAction" placeholder="การปฏิบัติ"></div>
+    <div class="field"><label>หมายเหตุ</label><input type="text" id="intakeNote" placeholder="หมายเหตุ (ถ้ามี)"></div>
     <div class="field"><label>กองที่ได้รับมอบหมาย</label>
       <select id="intakeDepartment">
         <option value="">-- เลือกกอง --</option>
@@ -469,14 +477,18 @@
     </div>
     <div class="field" id="intakeSectionField" style="display:none;"><label>งานในสำนักปลัด</label>
       <select id="intakeSection">
-        <option value="งานเกษตร">1. งานเกษตร</option>
-        <option value="งานป้องกัน">2. งานป้องกัน</option>
+        <option value="งานเกษตร">1. งานส่งเสริมการเกษตร</option>
+        <option value="งานป้องกัน">2. งานป้องกันและบรรเทาสาธารณภัย</option>
         <option value="งานธุรการ">3. งานธุรการ</option>
-        <option value="งานพัฒนาชุมชน">4. งานพัฒนาชุมชน</option>
-        <option value="งานการเจ้าหน้าที่">5. งานการเจ้าหน้าที่</option>
-        <option value="งานวิเคราะห์นโยบายและแผน">6. งานวิเคราะห์นโยบายและแผน</option>
-        <option value="ยิงตรงหาหัวหน้าสำนักปลัด">7. ยิงตรงหาหัวหน้าสำนักปลัด</option>
+        <option value="งานนิติการ">4. งานนิติการ</option>
+        <option value="งานพัฒนาชุมชน">5. งานพัฒนาชุมชน</option>
+        <option value="งานการเจ้าหน้าที่">6. งานการเจ้าหน้าที่</option>
+        <option value="งานวิเคราะห์นโยบายและแผน">7. งานวิเคราะห์นโยบายและแผน</option>
+        <option value="ยิงตรงหาหัวหน้าสำนักปลัด">8. ยิงตรงหาหัวหน้าสำนักปลัด</option>
       </select>
+    </div>
+    <div class="field"><label>แนบไฟล์ / สแกนเอกสารต้นเรื่อง</label>
+      <input type="file" id="intakeFile" multiple accept="image/*,application/pdf">
     </div>
     <div class="modal-actions">
       <button class="btn-sm" id="cancelIntake">ยกเลิก</button>
@@ -512,7 +524,7 @@ function fileToDataURL(file){
     r.readAsDataURL(file);
   });
 }
-// [ใหม่] escape ข้อความก่อนใส่ค่าเดิมกลับเข้าไปใน input ตอนแก้ไขรายการ กันเครื่องหมายคำพูดทำ HTML พัง
+// escape ข้อความก่อนใส่ค่าเดิมกลับเข้าไปใน input ตอนแก้ไขรายการ กันเครื่องหมายคำพูดทำ HTML พัง
 function escAttr(s){
   return String(s==null?'':s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
@@ -780,14 +792,14 @@ function renderDetail(){
 
     if(c.state==='done'){
       circleCls='done';
-      const fileChips = (c.files&&c.files.length) ? `<div class="file-row">${c.files.map(f=>`<a class="file-chip" href="${f.dataUrl}" target="_blank">📎 ${f.name}</a>`).join('')}</div>` : '';
+      const fileChips = (c.files&&c.files.length) ? `<div class="file-row">${c.files.map((f,fi)=>`<span class="file-chip" data-previewdone="${i}:${fi}">📎 ${f.name}</span>`).join('')}</div>` : '';
       const sigImg = c.signature ? `<img class="sig-thumb" src="${c.signature}">` : '';
       inner = `<div class="rung-note">${c.note}</div>${fileChips}${sigImg}`;
     } else if(c.state==='active'){
       circleCls='active'; cardCls='active';
       const canAct = !!loggedUser;
       if(canAct){
-        const fileChips = c.files.map((f,fi)=>`<span class="file-chip">📎 ${f.name}<span class="rm" data-rmfile="${fi}">✕</span></span>`).join('');
+        const fileChips = c.files.map((f,fi)=>`<span class="file-chip" data-previewfile="${fi}">📎 ${f.name}<span class="rm" data-rmfile="${fi}">✕</span></span>`).join('');
         inner = `
           <textarea class="note-input" id="noteInput" placeholder="พิมพ์ความเห็น / คำสั่งการก่อนเกษียนและส่งต่อ...">${c.note||''}</textarea>
           <div class="note-warn" id="noteWarn">กรุณาพิมพ์ความเห็น และเซ็นชื่อในช่องลายเซ็นก่อนเกษียนและส่งต่อ</div>
@@ -820,6 +832,15 @@ function renderDetail(){
       </div>`;
   });
 
+  // [ใหม่] กล่องเอกสารต้นเรื่อง — คำนวณจากไฟล์แนบของขั้นแรก (chain[0]) ให้เห็นทันทีบนสุด
+  // ทุกคนที่เปิดหนังสือฉบับนี้ ไม่ว่าจะอยู่ขั้นไหนของสายเกษียน โดยไม่ต้องเลื่อนหาในสายเกษียนด้านล่าง
+  const origFiles = (d.chain[0] && Array.isArray(d.chain[0].files)) ? d.chain[0].files : [];
+  const origAttachHtml = origFiles.length ? `
+    <div class="orig-attach-box">
+      <div class="orig-attach-label">📎 เอกสารต้นเรื่องที่แนบมาพร้อมหนังสือ (คลิกเพื่อเปิดดูแบบเต็มจอในแท็บใหม่ ซูมได้)</div>
+      <div class="file-row">${origFiles.map((f,fi)=>`<span class="file-chip" data-origfile="${fi}">📄 ${f.name}</span>`).join('')}</div>
+    </div>` : '';
+
   el.innerHTML = `
     <div class="detail-head">
       <div class="no">${d.no}</div>
@@ -831,9 +852,28 @@ function renderDetail(){
         ${isDone ? `<button class="print-btn" id="printBtn">🖨️ พิมพ์เอกสารฉบับสมบูรณ์</button>` : ''}
       </div>
     </div>
+    ${origAttachHtml}
     <div class="section-title">สายการเกษียน (จากผู้ปฏิบัติงานถึงนายกเทศมนตรี)</div>
     <div class="chain"><div class="chain-line"></div>${rungsHtml}</div>
   `;
+
+  // [ใหม่] ผูกคลิกเอกสารต้นเรื่อง (กล่องด้านบนสุด) ให้เปิดในแท็บใหม่
+  el.querySelectorAll('[data-origfile]').forEach(chip=>{
+    chip.onclick = ()=>{
+      const fi = parseInt(chip.dataset.origfile);
+      const file = origFiles[fi];
+      if(file) openFilePreview(file);
+    };
+  });
+
+  // ผูกคลิกไฟล์แนบของขั้นที่เกษียนไปแล้ว (done) ให้เปิดในแท็บใหม่ — ใช้ได้ทุกขั้น ไม่ขึ้นกับ activeIdx
+  el.querySelectorAll('[data-previewdone]').forEach(chip=>{
+    chip.onclick = ()=>{
+      const [ci, fi] = chip.dataset.previewdone.split(':').map(Number);
+      const file = d.chain[ci] && d.chain[ci].files && d.chain[ci].files[fi];
+      if(file) openFilePreview(file);
+    };
+  });
 
   if(activeIdx!==-1 && loggedUser){
     const pad = document.getElementById('sigPad');
@@ -851,7 +891,16 @@ function renderDetail(){
       renderDetail();
     };
     document.querySelectorAll('[data-rmfile]').forEach(x=>{
-      x.onclick = ()=>{ d.chain[activeIdx].files.splice(parseInt(x.dataset.rmfile),1); renderDetail(); };
+      x.onclick = (ev)=>{ ev.stopPropagation(); d.chain[activeIdx].files.splice(parseInt(x.dataset.rmfile),1); renderDetail(); };
+    });
+    // คลิกที่ชื่อไฟล์แนบ (ไม่ใช่ปุ่ม ✕) เพื่อดูตัวอย่างเอกสารในแท็บใหม่ก่อนกดเกษียนและส่งต่อ
+    document.querySelectorAll('[data-previewfile]').forEach(chip=>{
+      chip.onclick = (ev)=>{
+        if(ev.target.classList.contains('rm')) return; // กดปุ่มลบ ไม่ต้องเปิดพรีวิว
+        const fi = parseInt(chip.dataset.previewfile);
+        const file = d.chain[activeIdx].files[fi];
+        if(file) openFilePreview(file);
+      };
     });
 
     document.getElementById('btnForward').onclick = ()=>{
@@ -895,6 +944,40 @@ document.getElementById('actorNameConfirm').onclick = ()=>{
   closeActorNameModal();
   forward(d, idx, text, sigData, nameVal);
 };
+
+/* ===== [แก้ไขตามคำขอ] เปิดไฟล์แนบในแท็บใหม่อิสระของเบราว์เซอร์ (ไม่ใช่ป๊อปอัพในหน้าเดิมอีกต่อไป)
+   เพื่อให้ซูมดูเอกสารได้เต็มที่ด้วยเครื่องมือซูมของเบราว์เซอร์เอง เหมาะกับผู้บริหารระดับสูงที่ต้องการ
+   ดูเอกสารให้ชัดก่อนกดเกษียน — ใช้วิธีแปลงเป็น Blob URL ก่อนเปิด แทนการยิง data URL ตรงๆ เพราะ data URL
+   ที่ยาวมาก (ไฟล์ขนาดใหญ่) จะทำให้ Chrome เปิดแท็บใหม่แล้วขึ้นเป็นหน้าขาวเปล่า (ปัญหาที่เจอมาก่อนหน้านี้)
+   Blob URL สั้นกว่ามากและแก้ปัญหานี้ได้เด็ดขาด ไฟล์จะเปิดแสดงผลปกติพร้อมซูม/เลื่อนดูได้เหมือนเปิดไฟล์จริง ===== */
+function dataURLtoBlob(dataUrl){
+  const parts = dataUrl.split(',');
+  const mimeMatch = parts[0].match(/:(.*?);/);
+  const mime = mimeMatch ? mimeMatch[1] : 'application/octet-stream';
+  const bstr = atob(parts[1]);
+  let n = bstr.length;
+  const u8arr = new Uint8Array(n);
+  while(n--){ u8arr[n] = bstr.charCodeAt(n); }
+  return new Blob([u8arr], { type: mime });
+}
+function openFilePreview(file){
+  const name = (file && file.name) || 'เอกสารแนบ';
+  const dataUrl = (file && file.dataUrl) || '';
+  if(!dataUrl){ showToast('ไม่พบไฟล์แนบนี้','error'); return; }
+  try{
+    const blob = dataURLtoBlob(dataUrl);
+    const blobUrl = URL.createObjectURL(blob);
+    const win = window.open(blobUrl, '_blank');
+    if(!win){
+      showToast('เบราว์เซอร์บล็อกการเปิดแท็บใหม่ กรุณาอนุญาต Pop-up สำหรับเว็บไซต์นี้แล้วลองอีกครั้ง', 'error');
+    }
+    // เก็บ Blob URL ไว้สักพักให้แท็บใหม่โหลดไฟล์เสร็จก่อน ค่อยคืนหน่วยความจำ กันไฟล์เพี้ยนระหว่างโหลด
+    setTimeout(()=> URL.revokeObjectURL(blobUrl), 5*60*1000);
+  }catch(err){
+    console.error(err);
+    showToast('ไม่สามารถเปิดไฟล์นี้ได้: ' + err.message, 'error');
+  }
+}
 
 function forward(d, idx, text, sigData, actorName){
   (async ()=>{
@@ -1191,7 +1274,7 @@ document.getElementById('submitNew').onclick = async ()=>{
    ระบบ "ขอเลขหนังสือส่ง"
    ========================================== */
 let sendNumbers = [];
-let editingSendNum = null; // [ใหม่] เก็บเลข "num" ของรายการที่กำลังแก้ไข (null = กำลังสร้างใหม่)
+let editingSendNum = null; // เก็บเลข "num" ของรายการที่กำลังแก้ไข (null = กำลังสร้างใหม่)
 
 async function loadSendNumbers(){
   const res = await apiJSON('GET','/api/sendnumbers');
@@ -1205,7 +1288,7 @@ function renderSendNumbers(){
     body.innerHTML = `<tr><td colspan="10" class="fv-empty">ยังไม่มีการขอเลขหนังสือส่ง — กด "+ ขอเลขใหม่" เพื่อเริ่มต้น</td></tr>`;
     return;
   }
-  // [ใหม่] เรียงจากเลขน้อยไปมาก (1 → 100 ...) ตามที่ขอ ให้ดูเป็นทะเบียนต่อเนื่องเวลาพิมพ์/ดูรายการ
+  // เรียงจากเลขน้อยไปมาก (1 → 100 ...) ตามที่ขอ ให้ดูเป็นทะเบียนต่อเนื่องเวลาพิมพ์/ดูรายการ
   const sorted = [...sendNumbers].sort((a,b)=> (a.num||0) - (b.num||0));
   body.innerHTML = sorted.map(r=>`
     <tr>
@@ -1226,7 +1309,7 @@ function renderSendNumbers(){
       </td>
     </tr>`).join('');
 
-  // [ใหม่] ปุ่มแก้ไข — เปิดป๊อปอัพเดิมพร้อมข้อมูลเก่า แล้วสลับโหมดเป็น "แก้ไข"
+  // ปุ่มแก้ไข — เปิดป๊อปอัพเดิมพร้อมข้อมูลเก่า แล้วสลับโหมดเป็น "แก้ไข"
   body.querySelectorAll('[data-editsend]').forEach(btn=>{
     btn.onclick = ()=>{
       const rec = sendNumbers.find(r=> String(r.num)===btn.dataset.editsend);
@@ -1244,7 +1327,7 @@ function renderSendNumbers(){
       document.getElementById('sendNumModalBack').classList.add('open');
     };
   });
-  // [ใหม่] ปุ่มลบ — ยืนยันก่อนแล้วเรียก DELETE
+  // ปุ่มลบ — ยืนยันก่อนแล้วเรียก DELETE
   body.querySelectorAll('[data-delsend]').forEach(btn=>{
     btn.onclick = async ()=>{
       if(!confirm(`ยืนยันลบรายการเลขทะเบียนส่งที่ ${btn.dataset.delsend} ถาวร?`)) return;
@@ -1255,7 +1338,7 @@ function renderSendNumbers(){
   });
 }
 document.getElementById('newSendNumBtn').onclick = ()=>{
-  // [ใหม่] เปิดป๊อปอัพในโหมด "สร้างใหม่" เสมอ — ล้างค่าเดิมและสถานะแก้ไขทิ้งก่อน
+  // เปิดป๊อปอัพในโหมด "สร้างใหม่" เสมอ — ล้างค่าเดิมและสถานะแก้ไขทิ้งก่อน
   editingSendNum = null;
   document.getElementById('sendNumModalTitle').textContent = 'ขอเลขหนังสือส่ง';
   document.getElementById('sendNumModalHint').textContent = 'เลขทะเบียนส่งจะออกให้อัตโนมัติต่อจากเลขล่าสุด ไม่ต้องกรอกเอง';
@@ -1278,7 +1361,7 @@ document.getElementById('submitSendNum').onclick = async ()=>{
     note: document.getElementById('sendNote').value.trim(),
   };
   if(!payload.subject){ showToast('กรุณาระบุเรื่อง','error'); return; }
-  // [ใหม่] ถ้ากำลังแก้ไขอยู่ ให้ยิง PUT ไปที่เลขเดิม แทนการสร้างใหม่ด้วย POST
+  // ถ้ากำลังแก้ไขอยู่ ให้ยิง PUT ไปที่เลขเดิม แทนการสร้างใหม่ด้วย POST
   if(editingSendNum !== null){
     const res = await apiJSON('PUT', `/api/sendnumbers/${editingSendNum}`, payload);
     if(res && res.num){
@@ -1302,7 +1385,7 @@ document.getElementById('submitSendNum').onclick = async ()=>{
   }
 };
 
-// [ใหม่] พิมพ์ตารางรายการขอเลขหนังสือส่งทั้งหมด เรียงจากเลข 1 ขึ้นไป เป็นเอกสารเดียว
+// พิมพ์ตารางรายการขอเลขหนังสือส่งทั้งหมด เรียงจากเลข 1 ขึ้นไป เป็นเอกสารเดียว
 function printSendNumbers(){
   const sorted = [...sendNumbers].sort((a,b)=> (a.num||0) - (b.num||0));
   const rows = sorted.map(r=>`
@@ -1333,7 +1416,7 @@ document.getElementById('printSendNumBtn').onclick = printSendNumbers;
    ระบบ "ขอเลขคำสั่ง"
    ========================================== */
 let orderNumbers = [];
-let editingOrderNum = null; // [ใหม่] เก็บเลข "num" ของรายการที่กำลังแก้ไข (null = กำลังสร้างใหม่)
+let editingOrderNum = null; // เก็บเลข "num" ของรายการที่กำลังแก้ไข (null = กำลังสร้างใหม่)
 
 async function loadOrderNumbers(){
   const res = await apiJSON('GET','/api/ordernumbers');
@@ -1347,7 +1430,7 @@ function renderOrderNumbers(){
     body.innerHTML = `<tr><td colspan="7" class="fv-empty">ยังไม่มีการขอเลขคำสั่ง — กด "+ ขอเลขใหม่" เพื่อเริ่มต้น</td></tr>`;
     return;
   }
-  // [ใหม่] เรียงจากเลขน้อยไปมาก ตามที่ขอ
+  // เรียงจากเลขน้อยไปมาก ตามที่ขอ
   const sorted = [...orderNumbers].sort((a,b)=> (a.num||0) - (b.num||0));
   body.innerHTML = sorted.map(r=>`
     <tr>
@@ -1431,7 +1514,7 @@ document.getElementById('submitOrderNum').onclick = async ()=>{
   }
 };
 
-// [ใหม่] พิมพ์ตารางรายการขอเลขคำสั่งทั้งหมด เรียงจากเลข 1 ขึ้นไป เป็นเอกสารเดียว
+// พิมพ์ตารางรายการขอเลขคำสั่งทั้งหมด เรียงจากเลข 1 ขึ้นไป เป็นเอกสารเดียว
 function printOrderNumbers(){
   const sorted = [...orderNumbers].sort((a,b)=> (a.num||0) - (b.num||0));
   const rows = sorted.map(r=>`
@@ -1462,6 +1545,7 @@ const DEPARTMENTS = ['กองช่าง','กองคลัง','กอง�
 
 let intakes = [];
 let currentIntakeCategory = null;
+let editingIntakeId = null; // [ใหม่] เก็บ id ของรายการลงรับที่กำลังแก้ไข (null = กำลังลงรับใหม่)
 
 async function loadIntakes(){
   const res = await apiJSON('GET','/api/intakes');
@@ -1501,23 +1585,34 @@ function renderIntakeList(dep){
     wrap.innerHTML = `<div class="empty-list">ไม่มีเรื่องค้างรับในหมวดนี้</div>`;
     return;
   }
-  wrap.innerHTML = items.map(r=>`
+  wrap.innerHTML = items.map(r=>{
+    const fCount = Array.isArray(r.files) ? r.files.length : 0;
+    const attachBadge = fCount>0 ? `<span class="status-badge status-done">📎 แนบ ${fCount} ไฟล์</span>` : '';
+    // [ใหม่] แสดงหัวข้อให้ครบตามที่ขอ: เลขที่รับ / ที่ / ลงวันที่ / จาก / ถึง / เรื่อง / การปฏิบัติ / หมายเหตุ / ผู้ลงรับ(ผู้ขอเลข) / จัดการ
+    return `
     <div class="intake-item-card">
       <div class="intake-item-top">
         <span class="fv-num-badge">เลขที่รับ ${r.receiveNo}</span>
         ${r.section ? `<span class="status-badge status-pending">${r.section}</span>` : ''}
+        ${attachBadge}
+        <div class="fv-row-actions" style="margin-left:auto;">
+          <span class="fv-icon-btn" data-editintake="${r.id}" title="แก้ไข">✏️</span>
+          <span class="fv-icon-btn" data-delintake="${r.id}" title="ลบ">🗑️</span>
+        </div>
       </div>
       <div class="intake-item-title">${r.subject}</div>
       <div class="intake-item-meta">
         <div><b>ที่:</b> ${r.at||'-'} &nbsp; <b>ลงวันที่:</b> ${r.date||'-'}</div>
         <div><b>จาก:</b> ${r.from||'-'} &nbsp; <b>ถึง:</b> ${r.to||'-'}</div>
         <div><b>การปฏิบัติ:</b> ${r.action||'-'}</div>
-        <div><b>ลงรับโดย:</b> ${r.registeredBy||'-'}</div>
+        <div><b>หมายเหตุ:</b> ${r.note||'-'}</div>
+        <div><b>ผู้ลงรับ:</b> ${r.registeredBy||'-'}</div>
       </div>
       <div class="rung-actions" style="margin-top:10px;">
         <button class="btn-sm go" data-claim="${r.id}">✓ รับเรื่องนี้ → เข้าสู่สายเกษียน</button>
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
   wrap.querySelectorAll('[data-claim]').forEach(btn=>{
     btn.onclick = async ()=>{
       const res = await apiJSON('POST', `/api/intakes/${btn.dataset.claim}/claim`, {});
@@ -1537,20 +1632,65 @@ function renderIntakeList(dep){
       }
     };
   });
+  // [ใหม่] ปุ่มแก้ไข — เปิดป๊อปอัพลงรับเดิมพร้อมข้อมูลเก่า แล้วสลับโหมดเป็น "แก้ไข"
+  wrap.querySelectorAll('[data-editintake]').forEach(btn=>{
+    btn.onclick = ()=>{
+      const rec = intakes.find(r=> r.id === btn.dataset.editintake);
+      if(!rec) return;
+      editingIntakeId = rec.id;
+      document.getElementById('intakeModalTitle').textContent = `แก้ไขการลงรับหนังสือ (เลขที่รับ ${rec.receiveNo})`;
+      document.getElementById('intakeModalHint').textContent = 'แก้ไขข้อมูลแล้วกดตกลง เลขที่รับเดิมจะไม่เปลี่ยน';
+      document.getElementById('intakeAt').value = rec.at || '';
+      document.getElementById('intakeDate').value = rec.date || '';
+      document.getElementById('intakeFrom').value = rec.from || '';
+      document.getElementById('intakeTo').value = rec.to || '';
+      document.getElementById('intakeSubject').value = rec.subject || '';
+      document.getElementById('intakeAction').value = rec.action || '';
+      document.getElementById('intakeNote').value = rec.note || '';
+      document.getElementById('intakeDepartment').value = rec.department || '';
+      document.getElementById('intakeSectionField').style.display = (rec.department==='สำนักปลัด') ? 'block' : 'none';
+      if(rec.department==='สำนักปลัด') document.getElementById('intakeSection').value = rec.section || '';
+      document.getElementById('intakeFile').value = '';
+      document.getElementById('intakeModalBack').classList.add('open');
+    };
+  });
+  // [ใหม่] ปุ่มลบ — ยืนยันก่อนแล้วเรียก DELETE
+  wrap.querySelectorAll('[data-delintake]').forEach(btn=>{
+    btn.onclick = async ()=>{
+      if(!confirm('ยืนยันลบรายการลงรับหนังสือนี้ถาวร?')) return;
+      const res = await apiJSON('DELETE', `/api/intakes/${btn.dataset.delintake}`);
+      if(res && res.ok){ showToast('🗑️ ลบรายการเรียบร้อย', 'success'); await loadIntakes(); }
+      else showToast('ไม่สามารถลบได้' + (res && res.error ? ': '+res.error : ''), 'error');
+    };
+  });
 }
 
 document.getElementById('intakeDepartment').addEventListener('change', (e)=>{
   document.getElementById('intakeSectionField').style.display = (e.target.value === 'สำนักปลัด') ? 'block' : 'none';
 });
 document.getElementById('newIntakeBtn').onclick = ()=>{
+  // [ใหม่] เปิดป๊อปอัพในโหมด "ลงรับใหม่" เสมอ — ล้างค่าเดิมและสถานะแก้ไขทิ้งก่อน
+  editingIntakeId = null;
+  document.getElementById('intakeModalTitle').textContent = 'ลงรับหนังสือใหม่';
+  document.getElementById('intakeModalHint').textContent = 'เลขที่รับจะออกให้อัตโนมัติต่อจากเลขล่าสุด ไม่ต้องกรอกเอง';
+  ['intakeAt','intakeDate','intakeFrom','intakeTo','intakeSubject','intakeAction','intakeNote'].forEach(id=>{ document.getElementById(id).value=''; });
+  document.getElementById('intakeDepartment').value = '';
+  document.getElementById('intakeSectionField').style.display = 'none';
+  document.getElementById('intakeFile').value = '';
   document.getElementById('intakeModalBack').classList.add('open');
 };
 document.getElementById('cancelIntake').onclick = ()=>{
   document.getElementById('intakeModalBack').classList.remove('open');
+  editingIntakeId = null;
 };
-document.getElementById('intakeModalBack').addEventListener('click',(e)=>{ if(e.target.id==='intakeModalBack') document.getElementById('intakeModalBack').classList.remove('open'); });
+document.getElementById('intakeModalBack').addEventListener('click',(e)=>{ if(e.target.id==='intakeModalBack'){ document.getElementById('intakeModalBack').classList.remove('open'); editingIntakeId = null; } });
 document.getElementById('submitIntake').onclick = async ()=>{
   const department = document.getElementById('intakeDepartment').value;
+  // [ใหม่] แปลงไฟล์ที่แนบตอนลงรับให้เป็น dataURL เหมือนตอนสร้างหนังสือใหม่ทุกประการ
+  const rawIntakeFiles = Array.from(document.getElementById('intakeFile').files);
+  const intakeFiles = [];
+  for(const f of rawIntakeFiles){ intakeFiles.push(await fileToDataURL(f)); }
+
   const payload = {
     at: document.getElementById('intakeAt').value.trim(),
     date: document.getElementById('intakeDate').value.trim(),
@@ -1558,23 +1698,76 @@ document.getElementById('submitIntake').onclick = async ()=>{
     to: document.getElementById('intakeTo').value.trim(),
     subject: document.getElementById('intakeSubject').value.trim(),
     action: document.getElementById('intakeAction').value.trim(),
+    note: document.getElementById('intakeNote').value.trim(),
     department: department,
-    section: department==='สำนักปลัด' ? document.getElementById('intakeSection').value : ''
+    section: department==='สำนักปลัด' ? document.getElementById('intakeSection').value : '',
+    files: intakeFiles // [ใหม่] ส่งไฟล์แนบไปเก็บด้วย
   };
   if(!payload.subject){ showToast('กรุณาระบุเรื่อง','error'); return; }
   if(!payload.department){ showToast('กรุณาเลือกกองที่ได้รับมอบหมาย','error'); return; }
+
+  // [ใหม่] ถ้ากำลังแก้ไขอยู่ ให้ยิง PUT ไปที่รายการเดิม แทนการสร้างใหม่ด้วย POST
+  if(editingIntakeId !== null){
+    // ถ้าไม่ได้เลือกไฟล์ใหม่ตอนแก้ไข ให้คงไฟล์เดิมไว้ (ไม่ล้างไฟล์ที่แนบไปแล้วทิ้ง)
+    if(intakeFiles.length === 0) delete payload.files;
+    const res = await apiJSON('PUT', `/api/intakes/${editingIntakeId}`, payload);
+    if(res && res.receiveNo){
+      showToast(`✅ แก้ไขการลงรับหนังสือ (เลขที่รับ ${res.receiveNo}) เรียบร้อย`, 'success');
+      document.getElementById('intakeModalBack').classList.remove('open');
+      editingIntakeId = null;
+      await loadIntakes();
+    } else {
+      showToast('ไม่สามารถแก้ไขได้' + (res && res.error ? ': '+res.error : ''), 'error');
+    }
+    return;
+  }
+
   const res = await apiJSON('POST','/api/intakes', payload);
   if(res && res.receiveNo){
     showToast(`✅ ลงรับหนังสือเลขที่ ${res.receiveNo} เรียบร้อย`, 'success');
     document.getElementById('intakeModalBack').classList.remove('open');
-    ['intakeAt','intakeDate','intakeFrom','intakeTo','intakeSubject','intakeAction'].forEach(id=>{ document.getElementById(id).value=''; });
+    ['intakeAt','intakeDate','intakeFrom','intakeTo','intakeSubject','intakeAction','intakeNote'].forEach(id=>{ document.getElementById(id).value=''; });
     document.getElementById('intakeDepartment').value = '';
     document.getElementById('intakeSectionField').style.display = 'none';
+    document.getElementById('intakeFile').value = ''; // [ใหม่] เคลียร์ไฟล์ที่เลือกไว้
     await loadIntakes();
   } else {
     showToast('ไม่สามารถลงรับหนังสือได้' + (res && res.error ? ': '+res.error : ''), 'error');
   }
 };
+
+// [ใหม่] พิมพ์ทะเบียนรับหนังสือทั้งหมด (ทุกกอง ทุกสถานะ) เรียงจากเลขที่รับน้อยไปมาก เป็นเอกสารเดียว
+// ใช้หัวตารางตามที่ขอ: เลขที่รับ, ที่, ลงวันที่, จาก, ถึง, เรื่อง, การปฏิบัติ, หมายเหตุ, ผู้ลงรับ, กอง/งาน
+function printIntakes(){
+  const sorted = [...intakes].sort((a,b)=> (a.receiveNo||0) - (b.receiveNo||0));
+  const rows = sorted.map(r=>{
+    const depText = r.department + (r.section ? (' / ' + r.section) : '');
+    return `
+    <tr>
+      <td>${r.receiveNo}</td>
+      <td>${r.at||'-'}</td>
+      <td>${r.date||'-'}</td>
+      <td>${r.from||'-'}</td>
+      <td>${r.to||'-'}</td>
+      <td>${r.subject||'-'}</td>
+      <td>${r.action||'-'}</td>
+      <td>${r.note||'-'}</td>
+      <td>${r.registeredBy||'-'}</td>
+      <td>${depText}</td>
+    </tr>`;
+  }).join('');
+  document.getElementById('printArea').innerHTML = `
+    <div class="p-doc" style="max-width:100%;">
+      <div class="p-head"><div class="crest">เทศบาลตำบลพระเหลา</div><h2>ทะเบียนรับหนังสือ</h2></div>
+      <div class="p-meta"><span>รวม ${sorted.length} รายการ</span><span>วันที่พิมพ์: ${todayStr()}</span></div>
+      <table class="p-list-table">
+        <thead><tr><th>เลขที่รับ</th><th>ที่</th><th>ลงวันที่</th><th>จาก</th><th>ถึง</th><th>เรื่อง</th><th>การปฏิบัติ</th><th>หมายเหตุ</th><th>ผู้ลงรับ</th><th>กอง/งาน</th></tr></thead>
+        <tbody>${rows || '<tr><td colspan="10" style="text-align:center;">ไม่มีรายการ</td></tr>'}</tbody>
+      </table>
+    </div>`;
+  window.print();
+}
+document.getElementById('printIntakeBtn').onclick = printIntakes;
 
 // initial load: check auth and fetch docs
 loadMe();
